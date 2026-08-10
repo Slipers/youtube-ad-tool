@@ -706,7 +706,7 @@ function formatInterval(totalSeconds) {
   return `${m} min ${s}s`;
 }
 
-const APP_VERSION = '1.0';
+const APP_VERSION = '1.1';
 
 // Dépôt public : sert au contrôle de version et au téléchargement.
 const REPO_OWNER = 'Slipers';
@@ -718,9 +718,18 @@ const RELEASES_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/lat
 // Le libellé « Nouveau » n'est rendu que sur l'entrée la plus récente.
 const CHANGELOG = [
   {
-    version: '1.0',
+    version: '1.1',
     date: '10 août 2026',
     tag: 'Nouveau',
+    items: [
+      'Mise à jour installée par l\'extension elle-même : plus besoin de télécharger et remplacer à la main',
+      'Le dossier n\'est désigné qu\'une fois, l\'autorisation est ensuite mémorisée',
+      'Téléchargement complet avant écriture : une coupure réseau ne laisse pas l\'extension à moitié mise à jour',
+    ],
+  },
+  {
+    version: '1.0',
+    date: '10 août 2026',
     items: [
       'Première version stable : l\'extension sort de bêta',
       'Mise à jour vérifiée au démarrage depuis GitHub, avec téléchargement direct',
@@ -1057,6 +1066,9 @@ function setBusy(button, busy) {
 
 const urlParams = new URLSearchParams(location.search);
 const isPinned = urlParams.get('pinned') === '1';
+// Ouvert dans un onglet dédié : seul contexte où un sélecteur de dossier peut
+// s'ouvrir sans fermer l'interface.
+const isUpdaterView = urlParams.get('updater') === '1';
 const pinnedTabId = Number(urlParams.get('tab')) || null;
 const PIN_KEY = 'pinnedWindowId';
 
@@ -3123,6 +3135,8 @@ function installedVersion() {
 }
 
 function showUpdateGate(latest, info) {
+  pendingUpdate = { latest, info };
+
   gateUpdateText.textContent =
     `Version installée ${installedVersion()}, version disponible ${latest}. ` +
     "Installe-la pour continuer à utiliser l'extension.";
@@ -3132,6 +3146,14 @@ function showUpdateGate(latest, info) {
   gateUpdateNotes.textContent = notes;
 
   gateUpdate.hidden = false;
+
+  // Ouvert dans l'onglet de mise à jour : on explique la manipulation à venir.
+  if (isUpdaterView) {
+    updateProgress(
+      "Clique sur « Mettre à jour maintenant », puis désigne le dossier de l'extension. " +
+        "Cette autorisation n'est demandée qu'une fois."
+    );
+  }
 }
 
 async function checkForUpdate() {
@@ -3153,12 +3175,167 @@ async function checkForUpdate() {
   }
 }
 
+/* ---------------------------------------------------------------------------
+ * Mise à jour sur place.
+ *
+ * Aucune API ne permet à une extension de réécrire ses propres fichiers. On
+ * passe donc par l'API File System Access : tu désignes une fois le dossier de
+ * l'extension, on y télécharge les nouveaux fichiers, puis on recharge.
+ * L'autorisation est mémorisée, les fois suivantes se font sans rien demander.
+ * -------------------------------------------------------------------------*/
+
+const gateUpdateProgress = document.getElementById('gate-update-progress');
+const gateUpdateRun = document.getElementById('gate-update-run');
+const DEFAULT_UPDATE_FILES = [
+  'manifest.json',
+  'popup.html',
+  'popup.js',
+  'ico16.png',
+  'ico32.png',
+  'ico48.png',
+  'ico128.png',
+];
+
+let pendingUpdate = null;
+
+function updateProgress(text, isError = false) {
+  gateUpdateProgress.hidden = false;
+  gateUpdateProgress.textContent = text;
+  gateUpdateProgress.classList.toggle('is-err', isError);
+}
+
+/* Le handle de dossier survit à la fermeture du popup : on le garde en
+ * IndexedDB, seul stockage capable de conserver ce type d'objet. */
+function openHandleStore() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('yt-ad-tool', 1);
+    request.onupgradeneeded = () => request.result.createObjectStore('handles');
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function readSavedHandle() {
+  try {
+    const db = await openHandleStore();
+    return await new Promise((resolve) => {
+      const request = db.transaction('handles').objectStore('handles').get('extensionDir');
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => resolve(null);
+    });
+  } catch (e) {
+    return null;
+  }
+}
+
+async function saveHandle(handle) {
+  try {
+    const db = await openHandleStore();
+    db.transaction('handles', 'readwrite').objectStore('handles').put(handle, 'extensionDir');
+  } catch (e) {
+    // Sans mémorisation, il faudra redésigner le dossier la prochaine fois.
+  }
+}
+
+// Vérifie qu'on écrit bien dans le dossier de CETTE extension, pas ailleurs.
+async function looksLikeExtensionFolder(handle) {
+  try {
+    const file = await (await handle.getFileHandle('manifest.json')).getFile();
+    const parsed = JSON.parse(await file.text());
+    return String(parsed.name || '').toLowerCase().includes('youtube ad tool');
+  } catch (e) {
+    return false;
+  }
+}
+
+async function resolveExtensionFolder() {
+  const saved = await readSavedHandle();
+
+  if (saved) {
+    const granted = await saved.requestPermission({ mode: 'readwrite' });
+    if (granted === 'granted' && (await looksLikeExtensionFolder(saved))) return saved;
+  }
+
+  updateProgress("Choisis le dossier de l'extension dans la fenêtre qui s'ouvre…");
+  const picked = await window.showDirectoryPicker({ mode: 'readwrite' });
+
+  if (!(await looksLikeExtensionFolder(picked))) {
+    throw new Error(
+      "Ce dossier ne contient pas l'extension. Choisis celui où se trouve manifest.json."
+    );
+  }
+
+  await saveHandle(picked);
+  return picked;
+}
+
+async function runSelfUpdate() {
+  if (!pendingUpdate) return;
+  if (!window.showDirectoryPicker) {
+    updateProgress("Ce navigateur ne permet pas l'écriture de fichiers. Passe par le téléchargement manuel.", true);
+    return;
+  }
+
+  const { latest, info } = pendingUpdate;
+  const ref = String(info.ref || `v${latest}`);
+  const files = Array.isArray(info.files) && info.files.length ? info.files : DEFAULT_UPDATE_FILES;
+
+  gateUpdateRun.disabled = true;
+
+  try {
+    const folder = await resolveExtensionFolder();
+
+    // On télécharge tout avant d'écrire quoi que ce soit : si une requête
+    // échoue, l'extension reste dans un état cohérent.
+    const downloaded = [];
+    for (let i = 0; i < files.length; i++) {
+      updateProgress(`Téléchargement ${i + 1}/${files.length} — ${files[i]}`);
+      const url = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${ref}/${files[i]}`;
+      const response = await fetch(url, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`${files[i]} introuvable (HTTP ${response.status})`);
+      downloaded.push({ name: files[i], data: await response.arrayBuffer() });
+    }
+
+    for (let i = 0; i < downloaded.length; i++) {
+      updateProgress(`Installation ${i + 1}/${downloaded.length} — ${downloaded[i].name}`);
+      const handle = await folder.getFileHandle(downloaded[i].name, { create: true });
+      const writable = await handle.createWritable();
+      await writable.write(downloaded[i].data);
+      await writable.close();
+    }
+
+    updateProgress(`Version ${latest} installée. Rechargement…`);
+    setTimeout(() => chrome.runtime.reload(), 900);
+  } catch (err) {
+    const aborted = err && (err.name === 'AbortError' || err.name === 'NotAllowedError');
+    updateProgress(
+      aborted
+        ? 'Mise à jour annulée. Relance quand tu veux.'
+        : `Échec : ${err.message}. Tu peux télécharger la mise à jour à la main.`,
+      !aborted
+    );
+    gateUpdateRun.disabled = false;
+  }
+}
+
+gateUpdateRun.addEventListener('click', () => {
+  // Un sélecteur de fichiers ferme le popup de la barre d'outils : on bascule
+  // dans un onglet, où la fenêtre de choix peut s'ouvrir sans tout couper.
+  if (!isUpdaterView) {
+    chrome.tabs.create({ url: chrome.runtime.getURL('popup.html?updater=1') });
+    window.close();
+    return;
+  }
+  runSelfUpdate();
+});
+
 document.getElementById('gate-update-open').addEventListener('click', () => {
   chrome.tabs.create({ url: RELEASES_URL });
 });
 
 document.getElementById('gate-update-recheck').addEventListener('click', () => {
   gateUpdateText.textContent = 'Vérification en cours…';
+  gateUpdateProgress.hidden = true;
   checkForUpdate();
 });
 

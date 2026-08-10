@@ -1520,6 +1520,26 @@
       box-shadow: 0 10px 26px rgba(76, 141, 255, .35);
     }
 
+    .update-progress {
+      width: 100%;
+      padding: 9px 11px;
+      border: 1px solid rgba(76, 141, 255, .35);
+      border-radius: 10px;
+      background: rgba(76, 141, 255, .1);
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1.45;
+      color: var(--blue);
+      text-align: left;
+      white-space: pre-line;
+    }
+
+    .update-progress.is-err {
+      border-color: rgba(255, 45, 85, .4);
+      background: rgba(255, 45, 85, .1);
+      color: var(--accent);
+    }
+
     .update-notes {
       width: 100%;
       max-height: 132px;
@@ -2201,7 +2221,9 @@
       Une nouvelle version de l'extension est disponible. Installe-la pour continuer.
     </p>
     <p class="update-notes" id="gate-update-notes" hidden></p>
-    <button id="gate-update-open" class="gate-action">Télécharger la mise à jour</button>
+    <p class="update-progress" id="gate-update-progress" hidden></p>
+    <button id="gate-update-run" class="gate-action">Mettre à jour maintenant</button>
+    <button id="gate-update-open" class="link-btn" style="max-width:250px">Télécharger à la main</button>
     <button id="gate-update-recheck" class="link-btn" style="max-width:250px">J'ai mis à jour, vérifier</button>
   </div>
 

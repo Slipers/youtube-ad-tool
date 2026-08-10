@@ -1,5 +1,15 @@
 {
-  "version": "1.0",
-  "notes": "Première version stable.\n• Vérification des mises à jour au démarrage\n• Options pré-roll (0:00) et end-roll (fin de vidéo) dans le mode auto\n• Profil, niveaux et temps gagné",
+  "version": "1.1",
+  "ref": "v1.1",
+  "files": [
+    "manifest.json",
+    "popup.html",
+    "popup.js",
+    "ico16.png",
+    "ico32.png",
+    "ico48.png",
+    "ico128.png"
+  ],
+  "notes": "Mise à jour automatique.\n• L'extension installe elle-même la nouvelle version\n• Le dossier n'est désigné qu'une seule fois\n• Téléchargement complet avant écriture",
   "download": "https://github.com/Slipers/youtube-ad-tool/releases/latest"
 }
