@@ -1,0 +1,2236 @@
+﻿<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <style>
+    /* ---------- Thème ---------- */
+    :root {
+      color-scheme: dark;
+      --bg: #101014;
+      --bg-elev: #17171d;
+      --bg-elev-2: #1e1e26;
+      --border: #2a2a34;
+      --border-soft: #23232c;
+      --text: #f1f1f4;
+      --text-dim: #9a9aa8;
+      --text-faint: #6d6d7c;
+      --accent: #ff2d55;
+      --accent-2: #ff5f4d;
+      --blue: #4c8dff;
+      --green: #2fbf6b;
+      --purple: #a56bff;
+      --amber: #ffb020;
+      --shadow: 0 8px 24px rgba(0, 0, 0, .45);
+      --glow: .28;
+      --radius: 14px;
+    }
+
+    :root[data-theme="light"] {
+      color-scheme: light;
+      --bg: #f5f5f9;
+      --bg-elev: #ffffff;
+      --bg-elev-2: #eeeef4;
+      --border: #dfdfe8;
+      --border-soft: #e9e9f0;
+      --text: #16161c;
+      --text-dim: #5e5e6c;
+      --text-faint: #8b8b98;
+      --shadow: 0 6px 18px rgba(20, 20, 50, .10);
+      --glow: .16;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root:not([data-theme="dark"]) {
+        color-scheme: light;
+        --bg: #f5f5f9;
+        --bg-elev: #ffffff;
+        --bg-elev-2: #eeeef4;
+        --border: #dfdfe8;
+        --border-soft: #e9e9f0;
+        --text: #16161c;
+        --text-dim: #5e5e6c;
+        --text-faint: #8b8b98;
+        --shadow: 0 6px 18px rgba(20, 20, 50, .10);
+        --glow: .16;
+      }
+    }
+
+    * { box-sizing: border-box; }
+
+    /* la fenêtre épinglée est plus large que le popup : sans ça, la zone non
+       couverte par le body apparaît en blanc derrière les confettis */
+    html { background: var(--bg); }
+
+    body {
+      width: 360px;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+      font-size: 13px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: -60px -40px auto -40px;
+      height: 180px;
+      background:
+        radial-gradient(60% 100% at 20% 0%, rgba(255, 45, 85, var(--glow)), transparent 70%),
+        radial-gradient(50% 100% at 85% 10%, rgba(165, 107, 255, var(--glow)), transparent 70%);
+      filter: blur(12px);
+      pointer-events: none;
+    }
+
+    body.is-pinned { width: 100%; min-height: 100vh; }
+
+    .app { position: relative; padding: 12px 14px 10px; max-width: 360px; margin: 0 auto; }
+
+    /* une feuille ouverte doit disposer de toute la hauteur, même si l'onglet
+       affiché derrière est court */
+    body.sheet-open { min-height: 540px; }
+
+    /* ---------- En-tête ---------- */
+    .app-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 11px;
+    }
+
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      flex: none;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      background: linear-gradient(140deg, var(--accent), var(--accent-2));
+      box-shadow: 0 4px 12px rgba(255, 45, 85, .35);
+      color: #fff;
+    }
+
+    .brand-text { flex: 1; min-width: 0; }
+    .brand-text h1 { margin: 0; font-size: 13.5px; font-weight: 650; letter-spacing: -.01em; }
+    .brand-text p { margin: 1px 0 0; font-size: 10.5px; color: var(--text-dim); }
+
+    .header-actions { display: flex; gap: 3px; flex: none; }
+
+    .icon-btn {
+      flex: none;
+      width: 29px;
+      height: 29px;
+      display: grid;
+      place-items: center;
+      border-radius: 9px;
+      border: 1px solid var(--border);
+      background: var(--bg-elev);
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: .16s ease;
+      position: relative;
+    }
+
+    .icon-btn:hover {
+      color: var(--text);
+      border-color: var(--blue);
+      background: var(--bg-elev-2);
+      transform: translateY(-1px);
+    }
+
+    .icon-btn:active { transform: translateY(0); }
+
+    .icon-btn.on {
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--blue), var(--purple));
+      color: #fff;
+      box-shadow: 0 3px 10px rgba(76, 141, 255, .35);
+    }
+
+    .icon-btn.on:hover { color: #fff; filter: brightness(1.08); }
+
+    .icon-btn.locked { opacity: .6; cursor: not-allowed; }
+    .icon-btn.locked:hover { transform: none; border-color: transparent; }
+
+    .icon-btn .badge-dot {
+      position: absolute;
+      top: -3px;
+      right: -3px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid var(--bg);
+    }
+
+    /* icône affichée = thème vers lequel on bascule */
+    .to-light { display: block; }
+    .to-dark { display: none; }
+    :root[data-theme="light"] .to-light { display: none; }
+    :root[data-theme="light"] .to-dark { display: block; }
+
+    @media (prefers-color-scheme: light) {
+      :root:not([data-theme="dark"]) .to-light { display: none; }
+      :root:not([data-theme="dark"]) .to-dark { display: block; }
+    }
+
+    /* ---------- Onglets ---------- */
+    .tabs {
+      display: flex;
+      gap: 2px;
+      padding: 3px;
+      margin-bottom: 10px;
+      border: 1px solid var(--border-soft);
+      border-radius: 11px;
+      background: var(--bg-elev);
+      position: relative;
+    }
+
+    /* même principe pour les onglets : une pastille qui glisse et change de
+       dégradé selon la section visée */
+    .tab-thumb {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 0;
+      height: 0;
+      border-radius: 8px;
+      transition: transform .3s cubic-bezier(.2, .9, .3, 1.1), width .3s cubic-bezier(.2, .9, .3, 1.1),
+                  background .15s ease, box-shadow .15s ease;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .tab { position: relative; z-index: 1; }
+
+    .tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      padding: 6px 1px 5px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-faint);
+      font-family: inherit;
+      font-size: 8.5px;
+      font-weight: 700;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+      cursor: pointer;
+      position: relative;
+      transition: .15s ease;
+    }
+
+    /* pas de fond au survol : il resterait visible sous la pastille pendant
+       qu'elle glisse vers l'onglet cliqué */
+    .tab:hover { color: var(--text-dim); }
+
+    .tab.active { color: #fff; }
+
+    /* Une couleur par section : le dégradé est porté par la pastille mobile,
+       l'onglet ne garde que la couleur de son texte. */
+    .tab[data-tab="auto"].active { color: #3d2800; }
+
+    /* ---------- Couleur propre à chaque section ----------
+       Chaque panneau redéfinit ces variables ; curseurs, boutons et badges
+       s'y accrochent, si bien qu'ils s'accordent au dégradé de l'onglet. */
+    .panel {
+      --sec-a: var(--blue);
+      --sec-b: var(--purple);
+      --sec-solid: var(--blue);
+      --sec-ink: #fff;
+      --sec-glow: rgba(76, 141, 255, .35);
+      --sec-tint: rgba(76, 141, 255, .14);
+    }
+
+    #panel-auto {
+      --sec-a: #ffc247;
+      --sec-b: #ff8a3d;
+      --sec-solid: #d97706;
+      --sec-ink: #3d2800;
+      --sec-glow: rgba(255, 176, 32, .38);
+      --sec-tint: rgba(255, 176, 32, .16);
+    }
+
+    #panel-silence {
+      --sec-a: #5b97ff;
+      --sec-b: #2f6ee0;
+      --sec-solid: #2f6ee0;
+      --sec-ink: #fff;
+      --sec-glow: rgba(47, 110, 224, .35);
+      --sec-tint: rgba(76, 141, 255, .14);
+    }
+
+    #panel-interval {
+      --sec-a: #b07dff;
+      --sec-b: #7b3fe4;
+      --sec-solid: #7b3fe4;
+      --sec-ink: #fff;
+      --sec-glow: rgba(123, 63, 228, .35);
+      --sec-tint: rgba(165, 107, 255, .15);
+    }
+
+    #panel-tools {
+      --sec-a: #9d9daa;
+      --sec-b: #63636f;
+      --sec-solid: #63636f;
+      --sec-ink: #fff;
+      --sec-glow: rgba(99, 99, 111, .3);
+      --sec-tint: rgba(127, 127, 140, .14);
+    }
+
+    .panel { display: none; }
+    .panel.active { display: block; animation: slide .24s cubic-bezier(.2, .9, .3, 1); }
+
+    @keyframes slide {
+      from { opacity: 0; transform: translateY(7px) scale(.985); }
+    }
+
+
+    /* ---------- Cartes ---------- */
+    .card {
+      padding: 11px;
+      margin-bottom: 9px;
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius);
+      background: var(--bg-elev);
+      box-shadow: var(--shadow);
+    }
+
+    /* ---------- Repli animé des réglages ----------
+       Déclaré après .card, et sur .card.collapsible, pour que le repli
+       l'emporte bien sur le padding et la marge de la carte. */
+    .card.collapsible {
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      margin-top: 0;
+      margin-bottom: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      border-top-width: 0;
+      border-bottom-width: 0;
+      transition: max-height .28s cubic-bezier(.2, .9, .3, 1), opacity .18s ease,
+                  margin .28s ease, padding .28s ease;
+    }
+
+    .card.collapsible.open {
+      /* plafond large : l'engrenage du mode auto contient aussi les réglages
+         de remplissage, plus hauts en mode Silence */
+      max-height: 1200px;
+      opacity: 1;
+      margin-bottom: 9px;
+      padding-top: 11px;
+      padding-bottom: 11px;
+      border-top-width: 1px;
+      border-bottom-width: 1px;
+    }
+
+    /* dans une liste à gouttière : annule l'espace réservé quand c'est replié */
+    .card.collapsible.in-list { margin-top: -6px; }
+    .card.collapsible.in-list.open { margin-top: 0; margin-bottom: 0; }
+
+    .card-head { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+
+    .card-head h2 {
+      margin: 0;
+      font-size: 10.5px;
+      font-weight: 650;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      flex: 1;
+    }
+
+    .blurb {
+      margin: 0 0 9px;
+      padding: 8px 10px;
+      border-left: 2px solid var(--sec-b, var(--blue));
+      border-radius: 0 8px 8px 0;
+      background: var(--bg-elev);
+      font-size: 11px;
+      line-height: 1.45;
+      color: var(--text-dim);
+    }
+
+    .blurb strong { color: var(--text); font-weight: 600; }
+
+    .value-badge {
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: var(--sec-tint, rgba(76, 141, 255, .14));
+      border: 1px solid var(--sec-glow, rgba(76, 141, 255, .35));
+      color: var(--sec-solid, var(--blue));
+      font-size: 11.5px;
+      font-weight: 650;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    /* ---------- Curseur ---------- */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 20px;
+      background: transparent;
+      cursor: pointer;
+      margin: 0 0 7px;
+      display: block;
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 6px;
+      border-radius: 999px;
+      background:
+        linear-gradient(90deg, var(--sec-a, var(--blue)), var(--sec-b, var(--purple)))
+          0 / var(--fill, 40%) 100% no-repeat,
+        var(--bg-elev-2);
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      margin-top: -5px;
+      border-radius: 50%;
+      background: #fff;
+      border: 3px solid var(--sec-b, var(--blue));
+      box-shadow: 0 2px 6px rgba(0, 0, 0, .3);
+      transition: .15s ease;
+    }
+
+    input[type="range"]:hover::-webkit-slider-thumb { transform: scale(1.12); }
+
+    /* ---------- Saisie du temps ---------- */
+    .manual-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+    .manual-row .label { font-size: 10.5px; color: var(--text-faint); flex: 1; }
+
+    .time-field {
+      display: flex;
+      align-items: baseline;
+      gap: 3px;
+      padding: 4px 7px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg-elev-2);
+      transition: .14s ease;
+    }
+
+    .time-field:focus-within {
+      border-color: var(--sec-b, var(--blue));
+      box-shadow: 0 0 0 3px var(--sec-tint, rgba(76, 141, 255, .15));
+    }
+
+    .time-field input {
+      width: 26px;
+      padding: 0;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 650;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      outline: none;
+    }
+
+    .time-field input::-webkit-outer-spin-button,
+    .time-field input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+    .time-field span { font-size: 10px; font-weight: 600; color: var(--text-faint); }
+    .time-field.wide input { width: 34px; }
+
+    /* ---------- Raccourcis ---------- */
+    .preset-row { display: flex; flex-wrap: wrap; gap: 5px; }
+
+    .preset-btn {
+      padding: 5px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--bg-elev-2);
+      color: var(--text-dim);
+      font-size: 11px;
+      font-weight: 600;
+      font-family: inherit;
+      font-variant-numeric: tabular-nums;
+      cursor: pointer;
+      transition: .14s ease;
+    }
+
+    .preset-btn:hover { color: var(--text); border-color: var(--text-faint); }
+
+    .preset-btn.selected {
+      background: linear-gradient(135deg, var(--sec-a, var(--blue)), var(--sec-b, var(--purple)));
+      border-color: transparent;
+      color: var(--sec-ink, #fff);
+      box-shadow: 0 3px 10px var(--sec-glow, rgba(76, 141, 255, .3));
+    }
+
+    /* version compacte : sans curseur ni ligne de saisie séparée */
+    .interval-control.compact { padding: 0; margin: 0; border: none; background: none; box-shadow: none; }
+    .interval-control.compact .interval-slider { display: none; }
+    .interval-control.compact .card-head { margin-bottom: 7px; }
+    .interval-control.compact .manual-row { margin-bottom: 7px; }
+
+    /* ---------- Lignes d'option ---------- */
+    .opt-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .opt-row:last-child { margin-bottom: 0; }
+    .opt-row .opt-label { flex: 1; font-size: 11.5px; color: var(--text-dim); }
+
+    .seg {
+      display: flex;
+      gap: 3px;
+      padding: 3px;
+      border-radius: 9px;
+      background: var(--bg-elev-2);
+      border: 1px solid var(--border);
+    }
+
+    .seg button {
+      padding: 4px 9px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-faint);
+      font-family: inherit;
+      font-size: 10.5px;
+      font-weight: 650;
+      cursor: pointer;
+      transition: .14s ease;
+    }
+
+    .seg button:hover { color: var(--text); }
+    /* La pastille glisse d'un choix à l'autre : les boutons restent
+       transparents, c'est elle qui porte le dégradé. */
+    .seg { position: relative; }
+
+    .seg-thumb {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 0;
+      height: 0;
+      border-radius: 6px;
+      background: linear-gradient(135deg, var(--sec-a, var(--blue)), var(--sec-b, var(--purple)));
+      transition: transform .28s cubic-bezier(.2, .9, .3, 1.1), width .28s cubic-bezier(.2, .9, .3, 1.1);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .seg button { position: relative; z-index: 1; }
+    .seg button.selected { color: var(--sec-ink, #fff); }
+
+    /* ---------- Interrupteur ---------- */
+    .switch-row { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .switch-row input { position: absolute; opacity: 0; pointer-events: none; }
+
+    .switch {
+      flex: none;
+      width: 34px;
+      height: 19px;
+      border-radius: 999px;
+      background: var(--bg-elev-2);
+      border: 1px solid var(--border);
+      position: relative;
+      transition: .16s ease;
+    }
+
+    .switch::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: var(--text-faint);
+      transition: .16s ease;
+    }
+
+    .switch-row input:checked + .switch {
+      background: linear-gradient(135deg, var(--sec-a, var(--blue)), var(--sec-b, var(--purple)));
+      border-color: transparent;
+    }
+
+    .switch-row input:checked + .switch::after { left: 16px; background: #fff; }
+
+    /* ---------- Boutons principaux ---------- */
+    .hero, .primary-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 12px;
+      border: none;
+      border-radius: var(--radius);
+      color: #fff;
+      text-align: left;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: .18s ease;
+      font-family: inherit;
+    }
+
+    .hero { background: linear-gradient(135deg, #ff2d55 0%, #ff5f4d 55%, #ff8a3d 100%); box-shadow: 0 6px 18px rgba(255, 45, 85, .3); }
+    .primary-btn {
+      background: linear-gradient(135deg, var(--sec-a, var(--blue)), var(--sec-b, var(--purple)));
+      color: var(--sec-ink, #fff);
+      box-shadow: 0 6px 16px var(--sec-glow, rgba(76, 141, 255, .28));
+    }
+
+    .hero::after, .primary-btn::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(120deg, transparent 30%, rgba(255, 255, 255, .22) 50%, transparent 70%);
+      transform: translateX(-120%);
+      transition: transform .6s ease;
+    }
+
+    .hero:hover::after, .primary-btn:hover::after { transform: translateX(120%); }
+    .hero:hover, .primary-btn:hover { transform: translateY(-1px); filter: brightness(1.04); }
+    .hero:active, .primary-btn:active { transform: translateY(0) scale(.995); }
+
+    .hero-icon, .btn-icon {
+      width: 32px;
+      height: 32px;
+      flex: none;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, .2);
+    }
+
+    .hero-body, .btn-body { flex: 1; min-width: 0; }
+    .hero-title, .btn-title { display: block; font-size: 13px; font-weight: 650; }
+    .btn-sub { display: block; margin-top: 2px; font-size: 10.5px; opacity: .85; }
+    .hero-arrow { flex: none; opacity: .8; }
+
+    .hero-row { display: flex; align-items: stretch; gap: 6px; margin-bottom: 8px; }
+    .hero-row .hero { margin: 0; }
+
+    .gear-btn {
+      flex: none;
+      width: 40px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border-soft);
+      background: var(--bg-elev);
+      color: var(--text-dim);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: .16s ease;
+    }
+
+    .gear-btn.small { width: 38px; border-radius: 11px; }
+
+    .action-row { display: flex; align-items: stretch; gap: 6px; }
+    .action-row .action { flex: 1; min-width: 0; }
+
+    .gear-btn:hover { color: var(--text); border-color: var(--blue); background: var(--bg-elev-2); }
+    /* l'engrenage reste neutre : un dégradé gris, quelle que soit la section */
+    .gear-btn.open {
+      color: #fff;
+      background: linear-gradient(135deg, #9d9daa, #63636f);
+      border-color: transparent;
+      box-shadow: 0 3px 10px rgba(99, 99, 111, .3);
+    }
+
+    .link-btn {
+      display: block;
+      width: 100%;
+      margin-bottom: 8px;
+      padding: 6px;
+      border: 1px dashed var(--border);
+      border-radius: 9px;
+      background: transparent;
+      color: var(--text-faint);
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: .14s ease;
+    }
+
+    .link-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+    /* ---------- Déroulé du mode auto ---------- */
+    .mode-card { margin-bottom: 9px; }
+
+    .run-card {
+      text-align: center;
+      border-color: var(--sec-glow, rgba(76, 141, 255, .45));
+      animation: slide .2s ease;
+    }
+
+    .run-count {
+      font-size: 50px;
+      font-weight: 700;
+      line-height: 1.05;
+      font-variant-numeric: tabular-nums;
+      background: linear-gradient(135deg, var(--sec-a, var(--blue)), var(--sec-b, var(--purple)));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: tick .45s ease;
+    }
+
+    @keyframes tick { from { opacity: .25; transform: scale(.86); } }
+
+    .run-message {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 12.5px;
+      font-weight: 650;
+      color: var(--text);
+    }
+
+    .run-message .spinner { border-color: var(--sec-b, var(--blue)); border-right-color: transparent; }
+
+    .run-eta {
+      margin-top: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-faint);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .run-warn {
+      margin-top: 9px;
+      padding: 7px 9px;
+      border-radius: 8px;
+      background: rgba(255, 176, 32, .12);
+      border: 1px solid rgba(255, 176, 32, .35);
+      font-size: 10.5px;
+      line-height: 1.4;
+      font-weight: 600;
+      color: var(--amber);
+    }
+
+    /* ---------- Chantier en cours ---------- */
+    .wip-note {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin: 0 0 9px;
+      padding: 7px;
+      border: 1px dashed rgba(255, 176, 32, .5);
+      border-radius: 10px;
+      background: rgba(255, 176, 32, .1);
+      color: var(--amber);
+      font-size: 11px;
+      font-weight: 650;
+    }
+
+    /* bouton neutralisé : plus de dégradé, plus de relief */
+    .hero.disabled {
+      background: var(--bg-elev-2);
+      color: var(--text-faint);
+      box-shadow: none;
+      cursor: not-allowed;
+      opacity: 1;
+    }
+
+    .hero.disabled .hero-icon { background: rgba(127, 127, 140, .14); }
+    .hero.disabled::after { display: none; }
+    .hero.disabled:hover { transform: none; filter: none; }
+
+    /* ---------- Étapes ---------- */
+    .stepper {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 9px;
+    }
+
+    /* colonne : le libellé passe sous le numéro, sinon « Enregistrer »
+       déborde de la largeur du popup */
+    .step {
+      flex: 1 1 0;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      padding: 6px 2px;
+      border: 1px solid var(--border-soft);
+      border-radius: 9px;
+      background: var(--bg-elev);
+      font-size: 8.5px;
+      font-weight: 650;
+      letter-spacing: .01em;
+      text-align: center;
+      color: var(--text-faint);
+      transition: .16s ease;
+    }
+
+    .step span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .step b {
+      /* line-height à 1 : sans ça le chiffre est décalé vers le haut du cercle */
+      line-height: 1;
+      width: 17px;
+      height: 17px;
+      flex: none;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--bg-elev-2);
+      color: var(--text-faint);
+      font-size: 9px;
+    }
+
+    .step.muted { opacity: .5; }
+    .step.active { border-color: var(--sec-b, var(--blue)); color: var(--text); }
+
+    .step.active b {
+      background: linear-gradient(135deg, var(--sec-a, var(--blue)), var(--sec-b, var(--purple)));
+      color: var(--sec-ink, #fff);
+    }
+    .step.done { color: var(--green); border-color: rgba(47, 191, 107, .4); }
+    .step.done b { background: var(--green); color: #fff; }
+
+    /* ---------- Liste d'actions ---------- */
+    .section-label {
+      margin: 0 0 8px 2px;
+      font-size: 10.5px;
+      font-weight: 650;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .actions { display: flex; flex-direction: column; gap: 6px; }
+
+    .action {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 9px 11px;
+      border: 1px solid var(--border-soft);
+      border-radius: 11px;
+      background: var(--bg-elev);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 550;
+      text-align: left;
+      cursor: pointer;
+      transition: .15s ease;
+    }
+
+    .action:hover { background: var(--bg-elev-2); border-color: var(--border); transform: translateX(2px); }
+    .action:active { transform: translateX(0); }
+
+    .action-icon {
+      width: 28px;
+      height: 28px;
+      flex: none;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      background: var(--tint, rgba(127, 127, 140, .12));
+      color: var(--tone, var(--text-dim));
+    }
+
+    .action-label { flex: 1; min-width: 0; }
+
+    .action .chev {
+      flex: none;
+      color: var(--text-faint);
+      opacity: 0;
+      transform: translateX(-3px);
+      transition: .15s ease;
+    }
+
+    .action:hover .chev { opacity: 1; transform: translateX(0); }
+
+    #apply-interval { --tint: rgba(165, 107, 255, .14); --tone: var(--purple); }
+    #convert-auto { --tint: rgba(76, 141, 255, .14); --tone: var(--blue); }
+    #run { --tint: rgba(255, 176, 32, .18); --tone: var(--amber); }
+    #reset { --tint: rgba(255, 45, 85, .14); --tone: var(--accent); }
+    #reset:hover { border-color: rgba(255, 45, 85, .45); }
+
+    button:disabled { opacity: .55; cursor: default; transform: none !important; }
+
+    .spinner {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      animation: spin .7s linear infinite;
+      flex: none;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ---------- Arrêt d'urgence ---------- */
+    .stop-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      width: 100%;
+      margin-top: 9px;
+      padding: 9px;
+      border: 1px solid rgba(255, 45, 85, .5);
+      border-radius: 10px;
+      background: rgba(255, 45, 85, .12);
+      color: var(--accent);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 650;
+      cursor: pointer;
+      transition: .15s ease;
+      animation: breathe 1.6s ease-in-out infinite;
+    }
+
+    .stop-btn:hover {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      border-color: transparent;
+      color: #fff;
+      animation: none;
+    }
+
+    @keyframes breathe { 50% { border-color: rgba(255, 45, 85, .9); } }
+
+    /* ---------- Barre de statut ---------- */
+    .status {
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      margin-top: 9px;
+      padding: 9px 10px;
+      min-height: 36px;
+      border: 1px solid var(--border-soft);
+      border-radius: 10px;
+      background: var(--bg-elev);
+      font-size: 11.5px;
+      line-height: 1.45;
+      color: var(--text-dim);
+      transition: .18s ease;
+    }
+
+    .status .dot {
+      width: 6px;
+      height: 6px;
+      margin-top: 5px;
+      flex: none;
+      border-radius: 50%;
+      background: var(--text-faint);
+      transition: .18s ease;
+    }
+
+    .status.is-hint { border-style: dashed; }
+    .status.is-busy { border-color: rgba(76, 141, 255, .4); color: var(--text); }
+    .status.is-busy .dot { background: var(--blue); animation: pulse 1s ease-in-out infinite; }
+    .status.is-ok { border-color: rgba(47, 191, 107, .4); color: var(--text); }
+    .status.is-ok .dot { background: var(--green); }
+    .status.is-warn { border-color: rgba(255, 176, 32, .45); color: var(--text); }
+    .status.is-warn .dot { background: var(--amber); }
+    .status.is-err { border-color: rgba(255, 45, 85, .45); color: var(--text); }
+    .status.is-err .dot { background: var(--accent); }
+
+    @keyframes pulse { 50% { opacity: .3; } }
+
+    /* ---------- Panneaux plein écran ----------
+       Ils couvrent toute la fenêtre : un plafond de largeur ici laisserait une
+       bande claire à droite dans la fenêtre épinglée. C'est le contenu qui est
+       centré, pas le calque. */
+    .sheet {
+      position: fixed;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      background: var(--bg);
+      z-index: 15;
+    }
+
+    .sheet-head, .sheet-body { width: 100%; max-width: 360px; }
+
+    .sheet.open { display: flex; animation: sheetIn .2s cubic-bezier(.2, .9, .3, 1); }
+    .sheet > * { min-width: 0; }
+
+    @keyframes sheetIn { from { opacity: 0; transform: translateY(10px); } }
+
+    .sheet-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 14px 10px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .sheet-head h2 { flex: 1; margin: 0; font-size: 13.5px; font-weight: 650; }
+    .sheet-head p { margin: 1px 0 0; font-size: 10.5px; font-weight: 400; color: var(--text-dim); }
+
+    .sheet-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 14px 16px;
+      max-height: 540px;
+    }
+
+    .sheet-body::-webkit-scrollbar { width: 8px; }
+    .sheet-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
+
+    /* ---------- Presets ---------- */
+    .preset-card {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 10px;
+      margin-bottom: 6px;
+      border: 1px solid var(--border-soft);
+      border-radius: 11px;
+      background: var(--bg-elev);
+    }
+
+    .preset-card .info { flex: 1; min-width: 0; }
+    .preset-card b { display: block; font-size: 12.5px; font-weight: 650; }
+
+    .preset-card small {
+      display: block;
+      margin-top: 1px;
+      font-size: 10.5px;
+      color: var(--text-faint);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .mini-btn {
+      flex: none;
+      width: 27px;
+      height: 27px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg-elev-2);
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: .14s ease;
+    }
+
+    .mini-btn:hover { color: var(--text); border-color: var(--text-faint); }
+    .mini-btn.apply { border-color: transparent; background: linear-gradient(135deg, var(--blue), var(--purple)); color: #fff; }
+    .mini-btn.danger:hover { color: var(--accent); border-color: var(--accent); }
+
+    .empty {
+      padding: 18px 12px;
+      text-align: center;
+      font-size: 11.5px;
+      color: var(--text-faint);
+      border: 1px dashed var(--border);
+      border-radius: 11px;
+      margin-bottom: 10px;
+    }
+
+    .code-field {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--bg-elev-2);
+      color: var(--text);
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 11px;
+      resize: none;
+      outline: none;
+    }
+
+    .code-field:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(76, 141, 255, .15); }
+
+    /* ---------- Journal ---------- */
+    .log-item { position: relative; padding: 0 0 16px 18px; border-left: 2px solid var(--border); }
+    .log-item:last-child { border-left-color: transparent; padding-bottom: 0; }
+
+    .log-dot {
+      position: absolute;
+      left: -8px;
+      top: 2px;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: var(--green);
+      border: 3px solid var(--bg);
+      box-shadow: 0 0 0 1px var(--green);
+    }
+
+    .log-item.latest .log-dot { background: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 12px rgba(255, 45, 85, .5); }
+
+    .log-title { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; min-width: 0; margin-bottom: 5px; }
+    .log-title b { font-size: 13px; font-weight: 650; }
+
+    .log-tag {
+      padding: 1px 6px;
+      border-radius: 999px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      background: rgba(255, 45, 85, .16);
+      color: var(--accent);
+    }
+
+    .log-date { flex: none; font-size: 10.5px; color: var(--text-faint); margin-left: auto; }
+    .log-item ul { margin: 0; padding-left: 16px; }
+    .log-item li { font-size: 11.5px; line-height: 1.55; color: var(--text-dim); margin-bottom: 2px; overflow-wrap: anywhere; }
+
+    .log-item code {
+      padding: 1px 5px;
+      border-radius: 5px;
+      background: var(--bg-elev-2);
+      border: 1px solid var(--border);
+      font-size: 10.5px;
+      color: var(--text);
+    }
+
+    /* ---------- Fenêtre de confirmation ---------- */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(0, 0, 0, .5);
+      backdrop-filter: blur(3px);
+      z-index: 35;
+    }
+
+    .modal-backdrop.open { display: flex; animation: fade .14s ease; }
+
+    @keyframes fade { from { opacity: 0; } }
+
+    .modal {
+      width: 100%;
+      max-width: 324px;
+      padding: 15px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-elev);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, .4);
+      animation: pop .16s cubic-bezier(.2, .9, .3, 1.3);
+    }
+
+    @keyframes pop { from { opacity: 0; transform: scale(.94) translateY(6px); } }
+
+    .modal h3 { margin: 0 0 6px; font-size: 13.5px; font-weight: 650; }
+    .modal p { margin: 0 0 12px; font-size: 12px; line-height: 1.5; color: var(--text-dim); }
+
+    .modal input[type="text"] {
+      width: 100%;
+      margin-bottom: 12px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--bg-elev-2);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12.5px;
+      outline: none;
+    }
+
+    .modal input[type="text"]:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(76, 141, 255, .15); }
+
+    .choice-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+
+    .choice {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex: 1 1 45%;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--bg-elev-2);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: .14s ease;
+      user-select: none;
+    }
+
+    .choice:hover { border-color: var(--text-faint); }
+    .choice.checked { border-color: var(--blue); background: rgba(76, 141, 255, .12); }
+
+    .remember-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 12px;
+      font-size: 11.5px;
+      color: var(--text-dim);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    /* Cases à cocher maison : la case native ne suit pas le thème */
+    .choice input[type="checkbox"],
+    .remember-row input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      flex: none;
+      width: 17px;
+      height: 17px;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      border: 1.5px solid var(--border);
+      border-radius: 5px;
+      background: var(--bg-elev);
+      cursor: pointer;
+      transition: .15s ease;
+    }
+
+    .choice input[type="checkbox"]:hover,
+    .remember-row input[type="checkbox"]:hover { border-color: var(--blue); }
+
+    .choice input[type="checkbox"]:checked,
+    .remember-row input[type="checkbox"]:checked {
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--blue), var(--purple));
+      box-shadow: 0 2px 6px rgba(76, 141, 255, .35);
+    }
+
+    .choice input[type="checkbox"]::after,
+    .remember-row input[type="checkbox"]::after {
+      content: "";
+      width: 9px;
+      height: 5px;
+      margin-top: -2px;
+      border-left: 2px solid #fff;
+      border-bottom: 2px solid #fff;
+      transform: rotate(-45deg) scale(0);
+      transition: transform .15s cubic-bezier(.2, .9, .3, 1.4);
+    }
+
+    .choice input[type="checkbox"]:checked::after,
+    .remember-row input[type="checkbox"]:checked::after { transform: rotate(-45deg) scale(1); }
+
+    .modal-actions { display: flex; gap: 7px; justify-content: flex-end; }
+
+    .modal-actions button {
+      padding: 7px 14px;
+      border-radius: 9px;
+      border: 1px solid var(--border);
+      background: var(--bg-elev-2);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: .14s ease;
+    }
+
+    .modal-actions button:hover { border-color: var(--text-faint); }
+    .modal-actions .primary { border-color: transparent; background: linear-gradient(135deg, var(--blue), var(--purple)); color: #fff; }
+    .modal-actions .primary.danger { background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+    .modal-actions .primary:hover { filter: brightness(1.08); }
+
+    /* ---------- Profil et expérience ---------- */
+    .profile-head { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+
+    .level-badge {
+      flex: none;
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 11px;
+      background: linear-gradient(135deg, var(--sec-a), var(--sec-b));
+      color: var(--sec-ink);
+      font-size: 15px;
+      font-weight: 750;
+      line-height: 1;
+      box-shadow: 0 3px 10px var(--sec-glow);
+    }
+
+    .profile-text { flex: 1; min-width: 0; }
+    .profile-text b { display: block; font-size: 12.5px; font-weight: 650; }
+    .profile-text small { font-size: 10.5px; color: var(--text-faint); }
+
+    .profile-saved { text-align: right; flex: none; }
+    .profile-saved b { display: block; font-size: 13px; font-weight: 700; color: var(--green); }
+    .profile-saved small { font-size: 9.5px; color: var(--text-faint); }
+
+    .xp-bar {
+      height: 6px;
+      border-radius: 999px;
+      background: var(--bg-elev-2);
+      overflow: hidden;
+    }
+
+    .xp-bar i {
+      display: block;
+      height: 100%;
+      width: 0;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--sec-a), var(--sec-b));
+      transition: width .5s cubic-bezier(.2, .9, .3, 1);
+    }
+
+    .xp-toast {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 9px;
+      padding: 8px 10px;
+      border: 1px solid rgba(47, 191, 107, .4);
+      border-radius: 10px;
+      background: rgba(47, 191, 107, .12);
+      font-size: 11.5px;
+      font-weight: 650;
+      animation: toast-in .3s cubic-bezier(.2, .9, .3, 1.3);
+      transition: opacity .4s ease;
+    }
+
+    .xp-toast.fading { opacity: 0; }
+    .xp-toast-gain { color: var(--green); }
+    .xp-toast-time { color: var(--text-dim); }
+
+    @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
+
+    /* ---------- Bulle d'aide ---------- */
+    .help-tip {
+      display: inline-grid;
+      place-items: center;
+      width: 14px;
+      height: 14px;
+      margin-left: 4px;
+      vertical-align: -2px;
+      border-radius: 50%;
+      background: var(--bg-elev-2);
+      border: 1px solid var(--border);
+      color: var(--text-faint);
+      font-size: 9px;
+      font-weight: 700;
+      cursor: help;
+      transition: .14s ease;
+    }
+
+    .help-tip:hover,
+    .help-tip:focus-visible {
+      background: var(--sec-b, var(--blue));
+      border-color: transparent;
+      color: #fff;
+      outline: none;
+    }
+
+    /* La bulle s'aligne sur la ligne entière, pas sur le « ? » : ancrée au
+       point d'interrogation, elle sortait de l'interface par la gauche. */
+    .switch-row, .opt-row { position: relative; }
+
+    .tip-bubble {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 0;
+      right: 0;
+      width: auto;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--bg-elev);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, .18);
+      color: var(--text-dim);
+      font-size: 10.5px;
+      font-weight: 500;
+      line-height: 1.45;
+      text-align: left;
+      opacity: 0;
+      transform: translateY(4px);
+      pointer-events: none;
+      transition: .16s ease;
+      z-index: 12;
+    }
+
+    .help-tip:hover .tip-bubble,
+    .help-tip:focus-visible .tip-bubble { opacity: 1; transform: translateY(0); }
+
+    /* ---------- Fête de fin ---------- */
+    .confetti {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 40;
+      opacity: 1;
+      transition: opacity .9s ease;
+    }
+
+    .confetti.fading { opacity: 0; }
+
+    .confetti i {
+      position: absolute;
+      top: -14px;
+      width: 7px;
+      height: 11px;
+      animation-name: confetti-fall;
+      animation-timing-function: linear;
+      animation-iteration-count: infinite;
+    }
+
+    @keyframes confetti-fall {
+      from { transform: translateY(0) rotate(0deg); opacity: 0; }
+      8% { opacity: .9; }
+      85% { opacity: .9; }
+      to { transform: translateY(105vh) rotate(620deg); opacity: 0; }
+    }
+
+    .done-card { text-align: center; }
+    .done-card .check { display: block; margin: 2px auto 10px; }
+
+    .check-circle {
+      stroke-dasharray: 152;
+      stroke-dashoffset: 152;
+      animation: draw .5s cubic-bezier(.65, 0, .45, 1) forwards;
+    }
+
+    .check-mark {
+      stroke-dasharray: 48;
+      stroke-dashoffset: 48;
+      animation: draw .35s cubic-bezier(.65, 0, .45, 1) .45s forwards;
+    }
+
+    @keyframes draw { to { stroke-dashoffset: 0; } }
+
+    .done-card h3 { margin-bottom: 4px; font-size: 15px; }
+    .done-card p { margin-bottom: 14px; }
+
+    /* bouton aux couleurs du mode automatique */
+    .done-ok {
+      padding: 8px 18px;
+      border: none;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #ffc247, #ff8a3d);
+      color: #3d2800;
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(255, 176, 32, .4);
+      transition: .15s ease;
+    }
+
+    .done-ok:hover { filter: brightness(1.06); transform: translateY(-1px); }
+
+    /* ---------- Outils développeur ---------- */
+    .dev-fab {
+      position: fixed;
+      right: 10px;
+      bottom: 10px;
+      width: 26px;
+      height: 26px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg-elev);
+      color: var(--text-faint);
+      cursor: pointer;
+      z-index: 14;
+      opacity: .45;
+      transition: .16s ease;
+    }
+
+    .dev-fab:hover { opacity: 1; color: var(--text); border-color: var(--blue); }
+
+    #dev { z-index: 16; }
+
+    .dev-note {
+      margin: 8px 0 0;
+      font-size: 10.5px;
+      line-height: 1.45;
+      color: var(--text-faint);
+    }
+
+    .mini-action {
+      padding: 6px 11px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg-elev-2);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 11.5px;
+      font-weight: 650;
+      cursor: pointer;
+      transition: .14s ease;
+    }
+
+    .mini-action:hover { border-color: var(--blue); color: var(--blue); }
+
+    /* la barre de statut ne doit pas passer sous le bouton développeur */
+    .status { padding-right: 40px; }
+
+    /* ---------- Verrous plein écran ---------- */
+    .gate {
+      position: fixed;
+      inset: 0;
+      z-index: 25;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 22px 18px 60px;
+      background: var(--bg);
+      text-align: center;
+    }
+
+    .gate > * { max-width: 324px; }
+
+    .gate-banner {
+      width: 100%;
+      padding: 16px 14px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #ff2d55, #c1121f);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.35;
+      box-shadow: 0 10px 26px rgba(255, 45, 85, .35);
+    }
+
+
+    /* le verrou de mise à jour passe au-dessus de tout : tant qu'elle n'est
+       pas installée, rien d'autre n'est utilisable */
+    .gate-update { z-index: 60; }
+    .gate-update .gate-icon { color: var(--blue); }
+
+    .gate-banner.update {
+      background: linear-gradient(135deg, #4c8dff, #7b3fe4);
+      box-shadow: 0 10px 26px rgba(76, 141, 255, .35);
+    }
+
+    .update-notes {
+      width: 100%;
+      max-height: 132px;
+      overflow-y: auto;
+      padding: 9px 11px;
+      border: 1px solid var(--border-soft);
+      border-radius: 10px;
+      background: var(--bg-elev);
+      font-size: 10.5px;
+      line-height: 1.5;
+      color: var(--text-dim);
+      white-space: pre-line;
+      text-align: left;
+    }
+
+    .gate-icon { color: var(--accent); opacity: .9; }
+    .gate p { margin: 0; font-size: 12px; line-height: 1.5; color: var(--text-dim); }
+
+    .gate-action {
+      padding: 9px 16px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--blue), var(--purple));
+      color: #fff;
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 650;
+      cursor: pointer;
+      transition: .15s ease;
+    }
+
+    .gate-action:hover { filter: brightness(1.08); transform: translateY(-1px); }
+
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <div class="brand-mark">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22.5 7.2a2.8 2.8 0 0 0-2-2C18.8 4.7 12 4.7 12 4.7s-6.8 0-8.5.5a2.8 2.8 0 0 0-2 2A29 29 0 0 0 1 12a29 29 0 0 0 .5 4.8 2.8 2.8 0 0 0 2 2c1.7.5 8.5.5 8.5.5s6.8 0 8.5-.5a2.8 2.8 0 0 0 2-2A29 29 0 0 0 23 12a29 29 0 0 0-.5-4.8Z"/>
+          <path d="m10 15 5-3-5-3z" fill="currentColor"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h1>YouTube Ad Tool</h1>
+        <p>Emplacements mid-roll</p>
+      </div>
+      <div class="header-actions">
+        <button id="pin-btn" class="icon-btn" data-hint="Épingler : détache l'extension dans une petite fenêtre qui reste ouverte quand tu cliques sur la page.">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 3 21 9M14.5 3.5 20.5 9.5M16 8l-6 2-4 4 4 4 4-4 2-6M6 18l-3 3"/>
+          </svg>
+        </button>
+        <button id="avg-gap-icon" class="icon-btn" data-hint="Écart moyen actuel entre les pubs.">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+          </svg>
+        </button>
+        <button id="theme-btn" class="icon-btn" data-hint="Basculer entre le thème clair et le thème sombre.">
+          <svg class="to-light" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/>
+          </svg>
+          <svg class="to-dark" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/>
+          </svg>
+        </button>
+        <button id="presets-btn" class="icon-btn" data-hint="Enregistrer, appliquer, partager des presets de réglages.">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 3h12v18l-6-4-6 4V3Z"/>
+          </svg>
+        </button>
+        <button id="changelog-btn" class="icon-btn" data-hint="Mises à jour récentes de l'extension.">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 3h14v18H5V3Z"/><path d="M9 8h6M9 12h6M9 16h3"/>
+          </svg>
+          <span class="badge-dot" id="changelog-dot"></span>
+        </button>
+      </div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="auto">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12l1-8.5Z"/>
+        </svg>
+        Auto
+      </button>
+      <button class="tab" data-tab="silence">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12h3l2-5 3 12 3-9 2 4h5"/>
+        </svg>
+        Silence
+      </button>
+      <button class="tab" data-tab="interval">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        Régulier
+      </button>
+      <button class="tab" data-tab="tools">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14.7 6.3a4 4 0 0 0 5 5L15 16l-4-4 3.7-5.7Z"/><path d="m11 12-7 7 2 2 7-7"/>
+        </svg>
+        Outils
+      </button>
+    </nav>
+
+    <!-- ================= AUTO ================= -->
+    <section class="panel active" id="panel-auto">
+      <div class="hero-row">
+        <button id="auto-run" class="hero" data-hint="Lance l'étape en cours du mode automatique.">
+          <span class="hero-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12l1-8.5Z"/>
+            </svg>
+          </span>
+          <span class="hero-body">
+            <span class="hero-title" id="auto-title">Démarrer</span>
+          </span>
+          <svg class="hero-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12h13M13 6l6 6-6 6"/>
+          </svg>
+        </button>
+        <button id="auto-gear" class="gear-btn" data-hint="Réglages du mode automatique.">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7.9 19.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 14.6a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 7.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10 3.1V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1.3Z"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="stepper">
+        <div class="step" id="step-1"><b>1</b><span>Remplir</span></div>
+        <div class="step" id="step-2"><b>2</b><span>Enregistrer</span></div>
+        <div class="step" id="step-3"><b>3</b><span>Recharger</span></div>
+        <div class="step" id="step-4"><b>4</b><span>Réduire</span></div>
+      </div>
+
+      <div class="card run-card" id="auto-progress" hidden>
+        <div class="run-count" id="auto-countdown" hidden>20</div>
+        <div class="run-message" id="auto-message">Préparation…</div>
+        <div class="run-eta" id="auto-eta" hidden></div>
+        <div class="run-warn" id="auto-warn">
+          Ne quitte pas l'extension et laisse cet onglet sur YouTube Studio.
+        </div>
+      </div>
+
+      <p class="wip-note" id="auto-wip">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 20h18M6 20V9l6-4 6 4v11"/><path d="M10 20v-5h4v5"/>
+        </svg>
+        En cours de construction
+      </p>
+
+      <button id="auto-reload" class="link-btn" hidden>Recharger la page maintenant</button>
+      <button id="auto-cancel" class="link-btn" hidden>Annuler l'automatisation</button>
+
+      <div class="card mode-card">
+        <label class="switch-row" style="margin-bottom:9px"
+               data-hint="Transforme d'abord les emplacements « automatiques » en emplacements manuels.">
+          <span class="opt-label">Convertir les pubs auto d'abord</span>
+          <input type="checkbox" id="auto-convert" checked>
+          <span class="switch"></span>
+        </label>
+
+        <label class="switch-row" style="margin-bottom:9px"
+               data-hint="Ajoute un emplacement tout au début de la vidéo, à 0:00.">
+          <span class="opt-label">Ajouter une pub pré-roll (0:00)</span>
+          <input type="checkbox" id="auto-preroll">
+          <span class="switch"></span>
+        </label>
+
+        <label class="switch-row" style="margin-bottom:9px"
+               data-hint="Ajoute un emplacement tout à la fin de la vidéo.">
+          <span class="opt-label">Ajouter une pub end-roll (fin)</span>
+          <input type="checkbox" id="auto-endroll">
+          <span class="switch"></span>
+        </label>
+
+        <div class="opt-row">
+          <span class="opt-label">Méthode de remplissage</span>
+          <div class="seg" id="auto-fill-mode"
+               data-hint="Régulier : une pub tous les X. Silence : une pub par silence détecté dans la forme d'onde.">
+            <button data-mode="interval" class="selected">Régulier</button>
+            <button data-mode="silence">Silence</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card collapsible" id="auto-options">
+        <!-- Réglages du mode Régulier -->
+        <div class="interval-control compact" data-key="autoFill" id="auto-fill-block">
+          <div class="card-head">
+            <h2>Remplissage</h2>
+            <span class="value-badge">10s</span>
+          </div>
+          <input type="range" class="interval-slider" min="5" max="900" step="5" value="10"
+                 data-hint="Densité du remplissage initial : plus c'est court, plus YouTube aura de candidats à évaluer.">
+          <div class="manual-row">
+            <span class="label">Une pub toutes les</span>
+            <div class="time-field"><input type="number" class="min-input" min="0" max="15" step="1" value="0"><span>min</span></div>
+            <div class="time-field"><input type="number" class="sec-input" min="0" max="59" step="1" value="10"><span>sec</span></div>
+          </div>
+          <div class="preset-row">
+            <button class="preset-btn" data-seconds="10">10 s</button>
+            <button class="preset-btn" data-seconds="30">30 s</button>
+            <button class="preset-btn" data-seconds="60">1 min</button>
+            <button class="preset-btn" data-seconds="120">2 min</button>
+          </div>
+        </div>
+
+        <!-- Réglages du mode Silence (mêmes valeurs que l'onglet Silence) -->
+        <div id="auto-silence-block" hidden>
+          <div class="card-head"><h2>Détection</h2></div>
+          <div class="opt-row">
+            <span class="opt-label">Durée minimale du silence</span>
+            <span class="value-badge silence-dur-badge">500 ms</span>
+          </div>
+          <input type="range" class="silence-dur" min="0" max="1000" step="10" value="500"
+                 data-hint="Un passage doit rester silencieux au moins ce temps pour recevoir une pub.">
+          <div class="opt-row">
+            <span class="opt-label">Sensibilité</span>
+            <div class="seg sensitivity-seg"
+                 data-hint="Seuil sous lequel un passage compte comme silencieux, en % du volume moyen. Souple = plus de pubs.">
+              <button data-level="45">Souple</button>
+              <button data-level="30" class="selected">Normal</button>
+              <button data-level="15">Strict</button>
+            </div>
+          </div>
+
+          <div class="interval-control compact" data-key="silenceGap" style="margin-top:10px">
+            <div class="card-head">
+              <h2>Écart minimum</h2>
+              <span class="value-badge">2 min</span>
+            </div>
+            <input type="range" class="interval-slider" min="15" max="900" step="5" value="120"
+                   data-hint="Deux pubs ne seront jamais placées plus près que cet écart.">
+            <div class="manual-row">
+              <span class="label">Saisie manuelle</span>
+              <div class="time-field"><input type="number" class="min-input" min="0" max="15" step="1" value="2"><span>min</span></div>
+              <div class="time-field"><input type="number" class="sec-input" min="0" max="59" step="1" value="0"><span>sec</span></div>
+            </div>
+            <div class="preset-row">
+              <button class="preset-btn" data-seconds="30">30 s</button>
+              <button class="preset-btn" data-seconds="60">1 min</button>
+              <button class="preset-btn" data-seconds="120">2 min</button>
+              <button class="preset-btn" data-seconds="180">3 min</button>
+            </div>
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--border-soft);margin:10px 0">
+
+        <div class="opt-row">
+          <span class="opt-label">Objectif final</span>
+          <div class="seg" id="auto-target-mode">
+            <button data-mode="interval" class="selected">Fréquence</button>
+            <button data-mode="count">Nombre</button>
+          </div>
+        </div>
+
+        <div class="opt-row" id="auto-count-row">
+          <span class="opt-label">Nombre de pubs à garder</span>
+          <div class="time-field wide">
+            <input type="number" id="auto-count" min="1" max="60" step="1" value="8">
+            <span>pubs</span>
+          </div>
+        </div>
+
+        <div class="interval-control compact" data-key="autoInterval" id="auto-interval-row" hidden>
+          <div class="card-head">
+            <h2>Fréquence finale</h2>
+            <span class="value-badge">2 min</span>
+          </div>
+          <input type="range" class="interval-slider" min="15" max="900" step="5" value="120">
+          <div class="manual-row">
+            <span class="label">Une pub toutes les</span>
+            <div class="time-field"><input type="number" class="min-input" min="0" max="15" step="1" value="2"><span>min</span></div>
+            <div class="time-field"><input type="number" class="sec-input" min="0" max="59" step="1" value="0"><span>sec</span></div>
+          </div>
+          <div class="preset-row">
+            <button class="preset-btn" data-seconds="60">1 min</button>
+            <button class="preset-btn" data-seconds="120">2 min</button>
+            <button class="preset-btn" data-seconds="180">3 min</button>
+            <button class="preset-btn" data-seconds="300">5 min</button>
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--border-soft);margin:10px 0">
+
+        <label class="switch-row">
+          <span class="opt-label">
+            Sauvegarder automatiquement quand terminé
+            <span class="help-tip" tabindex="0">?
+              <span class="tip-bubble">
+                Une fois le parcours terminé, l'extension clique elle-même sur
+                « Continuer » puis « Enregistrer » dans YouTube Studio.
+                Décoché, elle s'arrête après la réduction et c'est à toi d'enregistrer.
+              </span>
+            </span>
+          </span>
+          <input type="checkbox" id="auto-save" checked>
+          <span class="switch"></span>
+        </label>
+      </div>
+    </section>
+
+    <!-- ================= SILENCE ================= -->
+    <section class="panel" id="panel-silence">
+      <button id="run-silence" class="primary-btn"
+              data-hint="Lit la forme d'onde de l'éditeur et place une pub au milieu de chaque silence.">
+        <span class="btn-icon">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12h3l2-5 3 12 3-9 2 4h5"/>
+          </svg>
+        </span>
+        <span class="btn-body">
+          <span class="btn-title">Placer dans les silences</span>
+          <span class="btn-sub">Règle les options ci-dessous, puis clique ici</span>
+        </span>
+      </button>
+
+      <p class="blurb" style="margin-top:9px">
+        Place les pubs dans les <strong>passages silencieux</strong> de la vidéo.
+      </p>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>Détection</h2>
+        </div>
+        <div class="opt-row">
+          <span class="opt-label">Durée minimale du silence</span>
+          <span class="value-badge silence-dur-badge">500 ms</span>
+        </div>
+        <input type="range" class="silence-dur" min="0" max="1000" step="10" value="500"
+               data-hint="Un passage doit rester silencieux au moins ce temps pour recevoir une pub.">
+        <div class="opt-row">
+          <span class="opt-label">Sensibilité</span>
+          <div class="seg sensitivity-seg"
+               data-hint="Seuil sous lequel un passage compte comme silencieux, en % du volume moyen. Souple = plus de pubs.">
+            <button data-level="45">Souple</button>
+            <button data-level="30" class="selected">Normal</button>
+            <button data-level="15">Strict</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card interval-control" data-key="silenceGap">
+        <div class="card-head">
+          <h2>Écart minimum</h2>
+          <span class="value-badge">2 min</span>
+        </div>
+        <input type="range" class="interval-slider" min="15" max="900" step="5" value="120"
+               data-hint="Deux pubs ne seront jamais placées plus près que cet écart.">
+        <div class="manual-row">
+          <span class="label">Saisie manuelle</span>
+          <div class="time-field"><input type="number" class="min-input" min="0" max="15" step="1" value="2"><span>min</span></div>
+          <div class="time-field"><input type="number" class="sec-input" min="0" max="59" step="1" value="0"><span>sec</span></div>
+        </div>
+        <div class="preset-row">
+          <button class="preset-btn" data-seconds="30">30 s</button>
+          <button class="preset-btn" data-seconds="60">1 min</button>
+          <button class="preset-btn" data-seconds="90">1 m 30</button>
+          <button class="preset-btn" data-seconds="120">2 min</button>
+          <button class="preset-btn" data-seconds="180">3 min</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= RÉGULIER ================= -->
+    <section class="panel" id="panel-interval">
+      <button id="run-interval" class="primary-btn"
+              data-hint="Ajoute un emplacement tous les X sur toute la durée de la vidéo.">
+        <span class="btn-icon">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+        </span>
+        <span class="btn-body">
+          <span class="btn-title">Placer les pubs</span>
+        </span>
+      </button>
+
+      <p class="blurb" style="margin-top:9px">
+        Place une pub à <strong>intervalle régulier</strong> sur toute la vidéo.
+      </p>
+
+      <div class="card interval-control" data-key="insertInterval">
+        <div class="card-head">
+          <h2>Intervalle</h2>
+          <span class="value-badge">2 min</span>
+        </div>
+        <input type="range" class="interval-slider" min="5" max="600" step="5" value="120"
+               data-hint="Une pub sera insérée tous les X, du début à la fin de la vidéo.">
+        <div class="manual-row">
+          <span class="label">Saisie manuelle</span>
+          <div class="time-field"><input type="number" class="min-input" min="0" max="10" step="1" value="2"><span>min</span></div>
+          <div class="time-field"><input type="number" class="sec-input" min="0" max="59" step="1" value="0"><span>sec</span></div>
+        </div>
+        <div class="preset-row">
+          <button class="preset-btn" data-seconds="10">10 s</button>
+          <button class="preset-btn" data-seconds="30">30 s</button>
+          <button class="preset-btn" data-seconds="120">2 min</button>
+          <button class="preset-btn" data-seconds="300">5 min</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= OUTILS ================= -->
+    <section class="panel" id="panel-tools">
+      <p class="section-label">Actions manuelles</p>
+      <div class="actions">
+        <div class="action-row">
+          <button id="apply-interval" class="action"
+                  data-hint="Supprime les pubs en trop pour atteindre l'objectif, en sacrifiant d'abord les intrusives.">
+            <span class="action-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14"/>
+              </svg>
+            </span>
+            <span class="action-label">Réduire les pubs en place</span>
+            <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+          </button>
+          <button id="reduce-gear" class="gear-btn small" data-hint="Choisir l'objectif : une fréquence ou un nombre de pubs.">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7.9 19.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 14.6a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 7.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10 3.1V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1.3Z"/>
+            </svg>
+          </button>
+        </div>
+
+      <div class="card collapsible in-list" id="reduce-options">
+        <div class="opt-row">
+          <span class="opt-label">Garder</span>
+          <div class="seg" id="sub-target-mode">
+            <button data-mode="interval" class="selected">Une fréquence</button>
+            <button data-mode="count">Un nombre</button>
+          </div>
+        </div>
+
+        <div class="opt-row" id="sub-count-row" hidden>
+          <span class="opt-label">Nombre de pubs à garder</span>
+          <div class="time-field wide">
+            <input type="number" id="sub-count" min="1" max="60" step="1" value="8">
+            <span>pubs</span>
+          </div>
+        </div>
+
+        <div class="interval-control compact" data-key="subtractive" id="sub-interval-row">
+          <div class="card-head">
+            <h2>Fréquence</h2>
+            <span class="value-badge">2 min</span>
+          </div>
+          <input type="range" class="interval-slider" min="15" max="900" step="5" value="120">
+          <div class="manual-row">
+            <span class="label">Une pub toutes les</span>
+            <div class="time-field"><input type="number" class="min-input" min="0" max="15" step="1" value="2"><span>min</span></div>
+            <div class="time-field"><input type="number" class="sec-input" min="0" max="59" step="1" value="0"><span>sec</span></div>
+          </div>
+          <div class="preset-row">
+            <button class="preset-btn" data-seconds="60">1 min</button>
+            <button class="preset-btn" data-seconds="120">2 min</button>
+            <button class="preset-btn" data-seconds="180">3 min</button>
+            <button class="preset-btn" data-seconds="300">5 min</button>
+          </div>
+        </div>
+      </div>
+
+        <button id="convert-auto" class="action" data-hint="Convertit les emplacements « automatiques » en emplacements manuels permanents.">
+          <span class="action-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 0 1 15.3-6.4L21 8M21 4v4h-4"/><path d="M21 12a9 9 0 0 1-15.3 6.4L3 16M3 20v-4h4"/>
+            </svg>
+          </span>
+          <span class="action-label">Convertir les pubs auto en manuel</span>
+          <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+        </button>
+
+        <button id="run" class="action" data-hint="Supprime les emplacements marqués ⚠️ (peu de chances de diffuser des annonces).">
+          <span class="action-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 3 2 20h18L11 3Z"/><path d="M11 9v5M11 17h.01"/>
+            </svg>
+          </span>
+          <span class="action-label">Supprimer les emplacements invalides</span>
+          <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+        </button>
+
+        <button id="reset" class="action" data-hint="Supprime absolument tous les emplacements, valides comme invalides."
+                data-keep-last>
+          <span class="action-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/>
+            </svg>
+          </span>
+          <span class="action-label">Tout supprimer (reset)</span>
+          <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+        </button>
+      </div>
+
+      <p class="section-label" style="margin-top:12px">Ton profil</p>
+      <div class="card profile-card">
+        <div class="profile-head">
+          <span class="level-badge" id="level-badge">1</span>
+          <div class="profile-text">
+            <b id="level-title">Niveau 1</b>
+            <small id="level-detail">0 XP</small>
+          </div>
+          <div class="profile-saved">
+            <b id="saved-total">0s</b>
+            <small>gagnées</small>
+          </div>
+        </div>
+        <div class="xp-bar"><i id="xp-bar-fill"></i></div>
+      </div>
+    </section>
+
+    <button id="stop-run" class="stop-btn" hidden>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+      Arrêter l'opération en cours
+    </button>
+
+    <div class="xp-toast" id="xp-toast" hidden>
+      <span class="xp-toast-gain" id="xp-toast-gain">+0 XP</span>
+      <span class="xp-toast-time" id="xp-toast-time"></span>
+    </div>
+
+    <div id="status" class="status">
+      <span class="dot"></span>
+      <span id="status-text">Ouvre l'éditeur d'emplacements dans YouTube Studio.</span>
+    </div>
+  </div>
+
+  <!-- ================= PRESETS ================= -->
+  <div class="sheet" id="presets">
+    <div class="sheet-head">
+      <div style="flex:1">
+        <h2>Presets</h2>
+        <p>Tes réglages, réutilisables en un clic</p>
+      </div>
+      <button class="icon-btn" id="presets-close" title="Fermer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <button id="preset-save" class="primary-btn" style="margin-bottom:12px">
+        <span class="btn-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 4h11l3 3v13H5V4Z"/><path d="M8 4v6h7M8 20v-6h8v6"/>
+          </svg>
+        </span>
+        <span class="btn-body">
+          <span class="btn-title">Enregistrer les réglages actuels</span>
+          <span class="btn-sub">Tous les onglets, en un preset</span>
+        </span>
+      </button>
+
+      <p class="section-label">Mes presets</p>
+      <div id="preset-list"></div>
+
+      <p class="section-label" style="margin-top:14px">Importer un code</p>
+      <textarea id="preset-import" class="code-field" rows="2" placeholder="Colle ici un code reçu, ex. A1B2-C3D4-E5F6-G7H8"></textarea>
+      <button id="preset-import-btn" class="link-btn" style="margin-top:7px">Importer ce code</button>
+    </div>
+  </div>
+
+  <!-- ================= MISES À JOUR ================= -->
+  <div class="sheet" id="changelog">
+    <div class="sheet-head">
+      <div style="flex:1">
+        <h2>Mises à jour récentes</h2>
+        <p id="changelog-version">Version installée : 1.3</p>
+      </div>
+      <button class="icon-btn" id="changelog-close" title="Fermer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body" id="changelog-list"></div>
+  </div>
+
+  <div class="confetti" id="confetti" hidden></div>
+
+  <div class="modal-backdrop" id="done-modal">
+    <div class="modal done-card">
+      <svg class="check" width="66" height="66" viewBox="0 0 52 52">
+        <circle class="check-circle" cx="26" cy="26" r="24" fill="none" stroke="#2fbf6b" stroke-width="3"/>
+        <path class="check-mark" fill="none" stroke="#2fbf6b" stroke-width="4.5" stroke-linecap="round"
+              stroke-linejoin="round" d="M14 27l8 8 16-17"/>
+      </svg>
+      <h3 id="done-title">Terminé !</h3>
+      <p id="done-detail"></p>
+      <div class="modal-actions" style="justify-content:center">
+        <button id="done-ok" class="done-ok" type="button">J'ai compris</button>
+      </div>
+    </div>
+  </div>
+
+  <button id="dev-fab" class="dev-fab" title="Outils développeur">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m8 8-5 4 5 4M16 8l5 4-5 4M14 4l-4 16"/>
+    </svg>
+  </button>
+
+  <!-- ================= DÉVELOPPEUR ================= -->
+  <div class="sheet" id="dev">
+    <div class="sheet-head">
+      <div style="flex:1">
+        <h2>Outils développeur</h2>
+        <p>Réglages temporaires, hors interface principale</p>
+      </div>
+      <button class="icon-btn" id="dev-close" title="Fermer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+
+    <div class="sheet-body">
+      <p class="section-label">Avertissements</p>
+      <div class="card">
+        <div class="opt-row">
+          <span class="opt-label">Avertissement bêta du mode Silence</span>
+          <button id="dev-reset-warning" class="mini-action">Réafficher</button>
+        </div>
+        <p class="dev-note" id="dev-warning-state">État : actif</p>
+
+        <hr style="border:none;border-top:1px solid var(--border-soft);margin:10px 0">
+
+        <div class="opt-row">
+          <span class="opt-label">Annonce de la version 1.0</span>
+          <button id="dev-reset-release" class="mini-action">Rejouer</button>
+        </div>
+        <p class="dev-note" id="dev-release-state">État : déjà vue</p>
+      </div>
+
+      <p class="section-label" style="margin-top:12px">Profil</p>
+      <div class="card">
+        <div class="opt-row">
+          <span class="opt-label">Niveau, XP et temps gagné</span>
+          <button id="dev-reset-profile" class="mini-action">Réinitialiser</button>
+        </div>
+        <p class="dev-note" id="dev-profile-state">Niveau 1 — 0 XP</p>
+      </div>
+
+      <p class="section-label" style="margin-top:12px">Mode automatique</p>
+      <div class="card">
+        <div class="opt-row">
+          <span class="opt-label">Pause avant enregistrement</span>
+          <span class="value-badge" id="dev-cooldown-badge">20 s</span>
+        </div>
+        <input type="range" id="dev-cooldown" min="0" max="60" step="1" value="20">
+        <p class="dev-note">
+          Temps d'attente entre le placement des pubs et le clic sur « Continuer ».
+          Trop court, YouTube peut ne pas avoir fini d'enregistrer les emplacements.
+        </p>
+
+        <hr style="border:none;border-top:1px solid var(--border-soft);margin:10px 0">
+
+        <div class="opt-row">
+          <span class="opt-label">Durée des confettis</span>
+          <span class="value-badge" id="dev-confetti-badge">10 s</span>
+        </div>
+        <input type="range" id="dev-confetti" min="0" max="30" step="1" value="10">
+        <p class="dev-note">
+          Durée de la fête de fin. Les étapes repassent au neutre à la fin de ce délai.
+          À zéro, plus de confettis — la fenêtre de fin reste affichée.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= VERROUS ================= -->
+  <div class="gate gate-update" id="gate-update" hidden>
+    <svg class="gate-icon" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 20h16"/>
+    </svg>
+    <div class="gate-banner update">Mise à jour requise</div>
+    <p id="gate-update-text">
+      Une nouvelle version de l'extension est disponible. Installe-la pour continuer.
+    </p>
+    <p class="update-notes" id="gate-update-notes" hidden></p>
+    <button id="gate-update-open" class="gate-action">Télécharger la mise à jour</button>
+    <button id="gate-update-recheck" class="link-btn" style="max-width:250px">J'ai mis à jour, vérifier</button>
+  </div>
+
+  <div class="gate" id="gate-studio" hidden>
+    <svg class="gate-icon" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="11" width="18" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+    </svg>
+    <div class="gate-banner">Merci d'ouvrir YouTube Studio pour utiliser l'extension</div>
+    <p>Les actions sont désactivées tant que l'onglet actif n'est pas sur studio.youtube.com.</p>
+    <button id="gate-open" class="gate-action">Ouvrir YouTube Studio</button>
+  </div>
+
+  <div class="modal-backdrop" id="modal">
+    <div class="modal" role="alertdialog" aria-modal="true">
+      <h3 id="modal-title">Confirmer</h3>
+      <p id="modal-message"></p>
+      <input type="text" id="modal-input" hidden>
+      <div class="choice-list" id="modal-choices" hidden></div>
+      <label class="remember-row" id="modal-remember" hidden>
+        <input type="checkbox" id="modal-remember-box">
+        <span>Ne plus me le rappeler</span>
+      </label>
+      <div class="modal-actions">
+        <button id="modal-cancel" type="button">Annuler</button>
+        <button id="modal-confirm" class="primary" type="button">Continuer</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

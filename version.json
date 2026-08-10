@@ -1,0 +1,5 @@
+{
+  "version": "1.0",
+  "notes": "Première version stable.\n• Vérification des mises à jour au démarrage\n• Options pré-roll (0:00) et end-roll (fin de vidéo) dans le mode auto\n• Profil, niveaux et temps gagné",
+  "download": "https://github.com/Slipers/youtube-ad-tool/releases/latest"
+}
