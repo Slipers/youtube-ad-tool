@@ -706,7 +706,7 @@ function formatInterval(totalSeconds) {
   return `${m} min ${s}s`;
 }
 
-const APP_VERSION = '1.1';
+const APP_VERSION = '1.2';
 
 // Dépôt public : sert au contrôle de version et au téléchargement.
 const REPO_OWNER = 'Slipers';
@@ -717,6 +717,15 @@ const RELEASES_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/lat
 
 // Le libellé « Nouveau » n'est rendu que sur l'entrée la plus récente.
 const CHANGELOG = [
+  {
+    version: '1.2',
+    date: '10 août 2026',
+    tag: 'Nouveau',
+    items: [
+      'Correction : l\'annonce de sortie de bêta se redéclenchait à chaque mise à jour, toujours avec le texte figé sur « 1.0 »',
+      'Elle ne se joue plus qu\'une seule fois dans la vie de l\'installation, et affiche la version réellement installée',
+    ],
+  },
   {
     version: '1.1',
     date: '10 août 2026',
@@ -1230,7 +1239,10 @@ const DEFAULTS = {
   },
   silenceMinMs: 500,
   silenceBetaAck: false,
-  seenRelease: null,
+  // Un booléen, pas un numéro de version : l'annonce de sortie de bêta ne
+  // doit se jouer qu'une fois dans la vie de l'installation, jamais se
+  // redéclencher à chaque future mise à jour (1.1, 1.2...).
+  stableWelcomeSeen: false,
   dev: { cooldown: 20, confetti: 10 },
   stats: { xp: 0, savedSeconds: 0 },
   silenceLevel: 30,
@@ -2295,18 +2307,20 @@ function celebrate(elapsedSeconds, detail, options = {}) {
   }, Math.max(1, duration) * 1000);
 }
 
-/* Annonce de sortie : jouée une seule fois par version stable, puis mémorisée.
- * Rejouable depuis le menu développeur. */
+/* Annonce de sortie de bêta : jouée une seule fois dans la vie de
+ * l'installation, jamais reliée à un numéro de version précis pour ne pas
+ * se redéclencher à chaque future mise à jour. Rejouable depuis le menu
+ * développeur, qui affiche alors la version réellement installée. */
 function announceRelease() {
   launchConfetti(Math.max(6, settings.dev.confetti));
 
-  doneTitle.textContent = 'La version 1.0 est là !';
+  doneTitle.textContent = `La version ${installedVersion()} est là !`;
   doneDetail.textContent =
-    "L'extension sort officiellement de bêta. Les mises à jour arrivent désormais " +
-    'automatiquement, et le mode auto sait placer une pub en pré-roll et en end-roll.';
+    "L'extension est sortie de bêta. Les mises à jour s'installent désormais depuis l'extension " +
+    'elle-même, et le mode auto sait placer une pub en pré-roll et en end-roll.';
   doneModal.classList.add('open');
 
-  settings.seenRelease = APP_VERSION;
+  settings.stableWelcomeSeen = true;
   saveSettings();
 }
 
@@ -2595,8 +2609,9 @@ function renderDev() {
     ? 'État : masqué (tu as coché « Ne plus me le rappeler »)'
     : 'État : actif';
 
-  document.getElementById('dev-release-state').textContent =
-    settings.seenRelease === APP_VERSION ? 'État : déjà vue' : 'État : sera jouée à la prochaine ouverture';
+  document.getElementById('dev-release-state').textContent = settings.stableWelcomeSeen
+    ? 'État : déjà vue'
+    : 'État : sera jouée à la prochaine ouverture';
 
   document.getElementById('dev-profile-state').textContent =
     `Niveau ${levelOf(settings.stats.xp)} — ${settings.stats.xp} XP, ` +
@@ -2639,7 +2654,7 @@ document.getElementById('dev-reset-warning').addEventListener('click', () => {
 });
 
 document.getElementById('dev-reset-release').addEventListener('click', () => {
-  settings.seenRelease = null;
+  settings.stableWelcomeSeen = false;
   saveSettings();
   renderDev();
   closeSheet(sheets.dev);
@@ -3369,8 +3384,9 @@ chrome.storage?.local.get(['settings'], (stored) => {
   changelogDot.hidden = settings.lastSeenVersion === APP_VERSION;
   renderPin();
 
-  // Première ouverture de cette version stable : on fête la sortie.
-  if (settings.seenRelease !== APP_VERSION && !APP_VERSION.startsWith('0.')) {
+  // Première ouverture d'une version stable, une seule fois dans la vie de
+  // l'installation : ne se redéclenche pas aux mises à jour suivantes.
+  if (!settings.stableWelcomeSeen && !APP_VERSION.startsWith('0.')) {
     announceRelease();
   }
 });
