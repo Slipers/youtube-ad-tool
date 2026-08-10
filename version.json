@@ -1,6 +1,6 @@
 {
-  "version": "1.1",
-  "ref": "v1.1",
+  "version": "1.2",
+  "ref": "v1.2",
   "files": [
     "manifest.json",
     "popup.html",
@@ -10,6 +10,6 @@
     "ico48.png",
     "ico128.png"
   ],
-  "notes": "Mise à jour automatique.\n• L'extension installe elle-même la nouvelle version\n• Le dossier n'est désigné qu'une seule fois\n• Téléchargement complet avant écriture",
+  "notes": "Correction : l'annonce de sortie de bêta se redéclenchait à chaque mise à jour, toujours avec le texte figé sur « 1.0 ». Elle ne se joue plus qu'une seule fois.",
   "download": "https://github.com/Slipers/youtube-ad-tool/releases/latest"
 }
