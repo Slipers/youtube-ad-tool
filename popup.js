@@ -706,7 +706,7 @@ function formatInterval(totalSeconds) {
   return `${m} min ${s}s`;
 }
 
-const APP_VERSION = '1.2';
+const APP_VERSION = '1.3';
 
 // Dépôt public : sert au contrôle de version et au téléchargement.
 const REPO_OWNER = 'Slipers';
@@ -717,6 +717,15 @@ const RELEASES_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/lat
 
 // Le libellé « Nouveau » n'est rendu que sur l'entrée la plus récente.
 const CHANGELOG = [
+  {
+    version: '1.3',
+    date: '11 août 2026',
+    tag: 'Nouveau',
+    items: [
+      'Nouvelle icône',
+      'Description du manifeste raccourcie sous la limite du Chrome Web Store (132 caractères)',
+    ],
+  },
   {
     version: '1.2',
     date: '10 août 2026',
