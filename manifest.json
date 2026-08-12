@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Youtube Ad Tool",
-  "version": "1.4",
+  "version": "1.5",
   "description": "Place et nettoie les emplacements d'annonce mid-roll de YouTube Studio : régulier, silences, réduction auto, presets.",
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": [

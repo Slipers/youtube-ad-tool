@@ -706,7 +706,7 @@ function formatInterval(totalSeconds) {
   return `${m} min ${s}s`;
 }
 
-const APP_VERSION = '1.4';
+const APP_VERSION = '1.5';
 
 // Dépôt public : sert au contrôle de version et au téléchargement.
 const REPO_OWNER = 'Slipers';
@@ -717,6 +717,14 @@ const RELEASES_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/lat
 
 // Le libellé « Nouveau » n'est rendu que sur l'entrée la plus récente.
 const CHANGELOG = [
+  {
+    version: '1.5',
+    date: '12 août 2026',
+    tag: 'Correctif',
+    items: [
+      "Corrige une boucle infinie de demande de mise à jour sur les installs Chrome Web Store : la mise à jour automatique n'est proposée que sur les installs en mode développeur, les installs normales sont mises à jour par Chrome lui-même",
+    ],
+  },
   {
     version: '1.4',
     date: '12 août 2026',
@@ -3334,6 +3342,24 @@ function installedVersion() {
   }
 }
 
+/* La mise à jour "sur place" réécrit un dossier local puis fait reload() :
+ * ça ne peut fonctionner que pour un chargement non empaqueté (mode
+ * développeur), où le dossier choisi EST le code que Chrome exécute. Pour une
+ * install Chrome Web Store, le code réel vit dans le stockage interne de
+ * Chrome — écrire ailleurs puis recharger ne fait que relancer l'ancienne
+ * version, d'où la boucle infinie de demande de mise à jour. On ne propose
+ * donc ce mécanisme qu'en mode développeur ; les installs normales sont mises
+ * à jour par Chrome lui-même depuis le Web Store, sans intervention ici.
+ * getSelf() ne nécessite pas la permission "management". */
+async function isDevelopmentInstall() {
+  try {
+    const info = await chrome.management.getSelf();
+    return info.installType === 'development';
+  } catch (e) {
+    return false;
+  }
+}
+
 function showUpdateGate(latest, info) {
   pendingUpdate = { latest, info };
 
@@ -3539,7 +3565,9 @@ document.getElementById('gate-update-recheck').addEventListener('click', () => {
   checkForUpdate();
 });
 
-checkForUpdate();
+isDevelopmentInstall().then((isDev) => {
+  if (isDev) checkForUpdate();
+});
 
 
 /* -------------------------------------------------- Restauration au départ */
