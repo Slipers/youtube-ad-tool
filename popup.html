@@ -1432,6 +1432,111 @@
 
     .done-ok:hover { filter: brightness(1.06); transform: translateY(-1px); }
 
+    .done-rate-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      margin-top: 10px;
+      padding: 0;
+      border: none;
+      background: none;
+      color: var(--text-faint);
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 650;
+      cursor: pointer;
+      transition: .14s ease;
+    }
+
+    .done-rate-link:hover { color: #ffb020; }
+
+    /* ---------- Notation ---------- */
+    .stars {
+      display: flex;
+      justify-content: center;
+      gap: 5px;
+      margin-bottom: 8px;
+    }
+
+    .star {
+      position: relative;
+      width: 36px;
+      height: 36px;
+      cursor: pointer;
+    }
+
+    .star svg {
+      position: absolute;
+      inset: 4px;
+      width: 28px;
+      height: 28px;
+    }
+
+    .star-back { fill: var(--bg-elev-2); stroke: var(--border); stroke-width: 1; }
+
+    .star-front {
+      fill: #ffb020;
+      clip-path: inset(0 calc(100% - var(--fill, 0%)) 0 0);
+      transition: clip-path .12s ease;
+    }
+
+    .star .half {
+      position: absolute;
+      inset: 0;
+      width: 50%;
+      border: none;
+      background: transparent;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    .star .half-r { left: 50%; }
+
+    .stars-value {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stars-clear {
+      margin-top: 6px;
+      border: none;
+      background: none;
+      color: var(--text-faint);
+      font-family: inherit;
+      font-size: 10.5px;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .stars-clear:hover { color: var(--accent); }
+
+    .rate-comment {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--bg-elev-2);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12px;
+      padding: 9px 10px;
+      resize: vertical;
+      outline: none;
+    }
+
+    .rate-comment:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(76, 141, 255, .15); }
+
+    .rate-count {
+      margin-top: 5px;
+      text-align: right;
+      font-size: 10px;
+      color: var(--text-faint);
+      font-variant-numeric: tabular-nums;
+    }
+
     /* ---------- Outils développeur ---------- */
     .dev-fab {
       position: fixed;
@@ -1454,6 +1559,7 @@
     .dev-fab:hover { opacity: 1; color: var(--text); border-color: var(--blue); }
 
     #dev { z-index: 16; }
+    #rate { z-index: 17; }
 
     .dev-note {
       margin: 8px 0 0;
@@ -2133,6 +2239,10 @@
       </svg>
       <h3 id="done-title">Terminé !</h3>
       <p id="done-detail"></p>
+      <button id="done-rate" class="done-rate-link" type="button" hidden>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3.1 6.6 7.2.9-5.3 5 1.4 7.2L12 18l-6.4 3.7 1.4-7.2-5.3-5 7.2-.9z"/></svg>
+        Noter cette action
+      </button>
       <div class="modal-actions" style="justify-content:center">
         <button id="done-ok" class="done-ok" type="button">J'ai compris</button>
       </div>
@@ -2169,10 +2279,19 @@
         <hr style="border:none;border-top:1px solid var(--border-soft);margin:10px 0">
 
         <div class="opt-row">
-          <span class="opt-label">Annonce de la version 1.0</span>
+          <span class="opt-label">Annonce de nouvelle version</span>
           <button id="dev-reset-release" class="mini-action">Rejouer</button>
         </div>
         <p class="dev-note" id="dev-release-state">État : déjà vue</p>
+      </div>
+
+      <p class="section-label" style="margin-top:12px">Avis</p>
+      <div class="card">
+        <div class="opt-row">
+          <span class="opt-label">Noter l'extension</span>
+          <button id="dev-rate-btn" class="mini-action">Ouvrir</button>
+        </div>
+        <p class="dev-note">Envoie une note et un commentaire optionnel — testable ici sans attendre la fin d'un placement.</p>
       </div>
 
       <p class="section-label" style="margin-top:12px">Profil</p>
@@ -2190,7 +2309,7 @@
           <span class="opt-label">Pause avant enregistrement</span>
           <span class="value-badge" id="dev-cooldown-badge">20 s</span>
         </div>
-        <input type="range" id="dev-cooldown" min="0" max="60" step="1" value="20">
+        <input type="range" id="dev-cooldown" min="0" max="60" step="1" value="3">
         <p class="dev-note">
           Temps d'attente entre le placement des pubs et le clic sur « Continuer ».
           Trop court, YouTube peut ne pas avoir fini d'enregistrer les emplacements.
@@ -2207,6 +2326,78 @@
           Durée de la fête de fin. Les étapes repassent au neutre à la fin de ce délai.
           À zéro, plus de confettis — la fenêtre de fin reste affichée.
         </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= NOTATION ================= -->
+  <div class="sheet" id="rate">
+    <div class="sheet-head">
+      <div style="flex:1">
+        <h2>Ton avis</h2>
+        <p>Aide à améliorer l'extension</p>
+      </div>
+      <button class="icon-btn" id="rate-close" title="Fermer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+
+    <div class="sheet-body">
+      <div class="card" style="text-align:center">
+        <div class="stars" id="rate-stars">
+          <div class="star" data-i="1">
+            <svg class="star-back" viewBox="0 0 24 24"><path d="m12 2 3.1 6.6 7.2.9-5.3 5 1.4 7.2L12 18l-6.4 3.7 1.4-7.2-5.3-5 7.2-.9z"/></svg>
+            <svg class="star-front" viewBox="0 0 24 24"><path d="m12 2 3.1 6.6 7.2.9-5.3 5 1.4 7.2L12 18l-6.4 3.7 1.4-7.2-5.3-5 7.2-.9z"/></svg>
+            <button class="half half-l" type="button" aria-label="0.5 étoile"></button>
+            <button class="half half-r" type="button" aria-label="1 étoile"></button>
+          </div>
+          <div class="star" data-i="2">
+            <svg class="star-back" viewBox="0 0 24 24"><path d="m12 2 3.1 6.6 7.2.9-5.3 5 1.4 7.2L12 18l-6.4 3.7 1.4-7.2-5.3-5 7.2-.9z"/></svg>
+            <svg class="star-front" viewBox="0 0 24 24"><path d="m12 2 3.1 6.6 7.2.9-5.3 5 1.4 7.2L12 18l-6.4 3.7 1.4-7.2-5.3-5 7.2-.9z"/></svg>
+            <button class="half half-l" type="button" aria-label="1.5 étoile"></button>
+            <button class="half half-r" type="button" aria-label="2 étoiles"></button>
+          </div>
+          <div class="star" data-i="3">
+            <svg class="star-back" viewBox="0 0 24 24"><path d="m12 2 3.1 6.6 7.2.9-5.3 5 1.4 7.2L12 18l-6.4 3.7 1.4-7.2-5.3-5 7.2-.9z"/></svg>
+            <svg class="star-front" viewBox="0 0 24 24"><path d="m12 2 3.1 6.6 7.2.9-5.3 5 1.4 7.2L12 18l-6.4 3.7 1.4-7.2-5.3-5 7.2-.9z"/></svg>
+            <button class="half half-l" type="button" aria-label="2.5 étoiles"></button>
+            <button class="half half-r" type="button" aria-label="3 étoiles"></button>
+          </div>
+          <div class="star" data-i="4">
+            <svg class="star-back" viewBox="0 0 24 24"><path d="m12 2 3.1 6.6 7.2.9-5.3 5 1.4 7.2L12 18l-6.4 3.7 1.4-7.2-5.3-5 7.2-.9z"/></svg>
+            <svg class="star-front" viewBox="0 0 24 24"><path d="m12 2 3.1 6.6 7.2.9-5.3 5 1.4 7.2L12 18l-6.4 3.7 1.4-7.2-5.3-5 7.2-.9z"/></svg>
+            <button class="half half-l" type="button" aria-label="3.5 étoiles"></button>
+            <button class="half half-r" type="button" aria-label="4 étoiles"></button>
+          </div>
+          <div class="star" data-i="5">
+            <svg class="star-back" viewBox="0 0 24 24"><path d="m12 2 3.1 6.6 7.2.9-5.3 5 1.4 7.2L12 18l-6.4 3.7 1.4-7.2-5.3-5 7.2-.9z"/></svg>
+            <svg class="star-front" viewBox="0 0 24 24"><path d="m12 2 3.1 6.6 7.2.9-5.3 5 1.4 7.2L12 18l-6.4 3.7 1.4-7.2-5.3-5 7.2-.9z"/></svg>
+            <button class="half half-l" type="button" aria-label="4.5 étoiles"></button>
+            <button class="half half-r" type="button" aria-label="5 étoiles"></button>
+          </div>
+        </div>
+        <div class="stars-value" id="rate-value">Aucune note</div>
+        <button class="stars-clear" id="rate-clear" type="button" hidden>Effacer la note</button>
+      </div>
+
+      <div class="card">
+        <textarea id="rate-comment" class="rate-comment" rows="4" maxlength="500"
+                  placeholder="Un commentaire ? (optionnel)"></textarea>
+        <div class="rate-count"><span id="rate-count">0</span>/500</div>
+      </div>
+
+      <button id="rate-submit" class="primary-btn" style="background:linear-gradient(135deg,#ffb020,#ff8a3d);box-shadow:0 6px 16px rgba(255,176,32,.28)">
+        <span class="btn-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>
+          </svg>
+        </span>
+        <span class="btn-body"><span class="btn-title">Envoyer</span></span>
+      </button>
+
+      <div id="rate-status" class="status" hidden>
+        <span class="dot"></span>
+        <span id="rate-status-text"></span>
       </div>
     </div>
   </div>

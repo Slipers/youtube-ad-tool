@@ -706,7 +706,7 @@ function formatInterval(totalSeconds) {
   return `${m} min ${s}s`;
 }
 
-const APP_VERSION = '1.3';
+const APP_VERSION = '1.4';
 
 // Dépôt public : sert au contrôle de version et au téléchargement.
 const REPO_OWNER = 'Slipers';
@@ -717,6 +717,17 @@ const RELEASES_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/lat
 
 // Le libellé « Nouveau » n'est rendu que sur l'entrée la plus récente.
 const CHANGELOG = [
+  {
+    version: '1.4',
+    date: '12 août 2026',
+    tag: 'Nouveau',
+    items: [
+      'Système de notation : étoiles de 0 à 5 (par demi-point) et commentaire optionnel, envoyés directement par Discord',
+      'Accessible depuis le menu développeur et proposé à la fin de chaque placement de pubs',
+      'Fête de bienvenue à chaque nouvelle version, plus seulement au passage en version stable',
+      'Pause par défaut du mode auto ramenée à 3 secondes',
+    ],
+  },
   {
     version: '1.3',
     date: '11 août 2026',
@@ -1036,6 +1047,7 @@ const sheets = {
   presets: document.getElementById('presets'),
   changelog: document.getElementById('changelog'),
   dev: document.getElementById('dev'),
+  rate: document.getElementById('rate'),
 };
 
 function syncSheetHeight() {
@@ -1248,11 +1260,7 @@ const DEFAULTS = {
   },
   silenceMinMs: 500,
   silenceBetaAck: false,
-  // Un booléen, pas un numéro de version : l'annonce de sortie de bêta ne
-  // doit se jouer qu'une fois dans la vie de l'installation, jamais se
-  // redéclencher à chaque future mise à jour (1.1, 1.2...).
-  stableWelcomeSeen: false,
-  dev: { cooldown: 20, confetti: 10 },
+  dev: { cooldown: 3, confetti: 10 },
   stats: { xp: 0, savedSeconds: 0 },
   silenceLevel: 30,
   sub: { mode: 'interval', count: 8 },
@@ -1835,6 +1843,7 @@ async function runInsertion(button, mode, params, busyMessage, { celebrate = tru
         detail: `${result.inserted} pub(s) placée(s). ${SAVE_HINT}`,
         ads: result.inserted,
         startedAt,
+        allowRating: true,
       });
     }
     return result;
@@ -2287,14 +2296,17 @@ function awardXp(ads, elapsedSeconds = 0) {
 }
 
 /* Fin d'une action : coche animée, confettis et gain d'XP. Utilisé aussi bien
- * par le mode automatique que par les outils manuels. */
-function finishAction({ title, detail, ads, startedAt }) {
+ * par le mode automatique que par les outils manuels. allowRating n'est vrai
+ * que pour les actions de placement (pas la réduction ni les suppressions) :
+ * c'est là qu'on propose de noter l'extension. */
+function finishAction({ title, detail, ads, startedAt, allowRating = false }) {
   const elapsed = startedAt ? (Date.now() - startedAt) / 1000 : 0;
   const levelUp = awardXp(ads, elapsed);
 
   celebrate(elapsed, detail, {
     title: title || (elapsed ? `Terminé en ${formatInterval(Math.max(1, Math.round(elapsed)))} !` : 'Terminé !'),
     levelUp,
+    allowRating,
   });
 }
 
@@ -2308,6 +2320,7 @@ function celebrate(elapsedSeconds, detail, options = {}) {
   doneDetail.textContent = options.levelUp
     ? `${detail} Niveau ${levelOf(settings.stats.xp)} atteint !`
     : detail;
+  document.getElementById('done-rate').hidden = !options.allowRating;
   doneModal.classList.add('open');
 
   // Les étapes restent vertes le temps de la fête, puis reviennent au neutre.
@@ -2316,20 +2329,184 @@ function celebrate(elapsedSeconds, detail, options = {}) {
   }, Math.max(1, duration) * 1000);
 }
 
-/* Annonce de sortie de bêta : jouée une seule fois dans la vie de
- * l'installation, jamais reliée à un numéro de version précis pour ne pas
- * se redéclencher à chaque future mise à jour. Rejouable depuis le menu
- * développeur, qui affiche alors la version réellement installée. */
-function announceRelease() {
+/* ============================================================================
+ * Notation
+ * Étoiles 0 à 5 par pas de 0,5, commentaire optionnel, envoyé en embed
+ * Discord via un webhook. Accessible depuis le menu développeur et depuis la
+ * fenêtre de fin d'un placement de pubs.
+ * ==========================================================================*/
+
+// Webhook fourni par l'utilisateur pour son propre serveur Discord. Comme
+// tout code d'extension, cette valeur est publique dès la publication (dépôt
+// GitHub ouvert, extension installable par n'importe qui) : elle doit être
+// traitée comme une adresse connue de tous, pas comme un secret protégé.
+const RATING_WEBHOOK_URL =
+  'https://discord.com/api/webhooks/1537043174441361439/oqUeBCFHOoRrof0u1A1OtYrW7tMsB2v-OtgmiPualp88ROBPBa8zpZ8ceie0If4XniEo';
+const RATING_ICON_URL = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/ico128.png`;
+
+const rateStars = Array.from(document.querySelectorAll('#rate-stars .star'));
+const rateValueLabel = document.getElementById('rate-value');
+const rateClearBtn = document.getElementById('rate-clear');
+const rateComment = document.getElementById('rate-comment');
+const rateCount = document.getElementById('rate-count');
+const rateSubmitBtn = document.getElementById('rate-submit');
+const rateStatusBox = document.getElementById('rate-status');
+const rateStatusText = document.getElementById('rate-status-text');
+
+let rateValue = 0;
+let rateContext = 'Menu développeur';
+
+function paintStars(value) {
+  rateStars.forEach((el, index) => {
+    const fill = Math.max(0, Math.min(1, value - index)) * 100;
+    el.style.setProperty('--fill', `${fill}%`);
+  });
+  rateValueLabel.textContent = value > 0 ? `${value} / 5` : 'Aucune note';
+  rateClearBtn.hidden = value <= 0;
+}
+
+rateStars.forEach((el, index) => {
+  const i = index + 1;
+  const left = el.querySelector('.half-l');
+  const right = el.querySelector('.half-r');
+  left.addEventListener('mouseenter', () => paintStars(i - 0.5));
+  right.addEventListener('mouseenter', () => paintStars(i));
+  left.addEventListener('click', () => {
+    rateValue = i - 0.5;
+    paintStars(rateValue);
+  });
+  right.addEventListener('click', () => {
+    rateValue = i;
+    paintStars(rateValue);
+  });
+});
+
+document.getElementById('rate-stars').addEventListener('mouseleave', () => paintStars(rateValue));
+
+rateClearBtn.addEventListener('click', () => {
+  rateValue = 0;
+  paintStars(0);
+});
+
+rateComment.addEventListener('input', () => {
+  rateCount.textContent = String(rateComment.value.length);
+});
+
+function setRateStatus(text, type) {
+  rateStatusBox.hidden = false;
+  rateStatusBox.className = 'status is-' + type;
+  rateStatusText.textContent = text;
+}
+
+function starsText(value) {
+  const full = Math.floor(value);
+  const half = value - full >= 0.5;
+  return '★'.repeat(full) + (half ? '⯨' : '') + '☆'.repeat(Math.max(0, 5 - full - (half ? 1 : 0)));
+}
+
+function ratingColor(value) {
+  if (value <= 0) return 0x9d9daa;
+  if (value >= 4) return 0x2fbf6b;
+  if (value >= 2.5) return 0xffb020;
+  return 0xff2d55;
+}
+
+async function submitRating() {
+  const comment = rateComment.value.trim();
+
+  rateSubmitBtn.disabled = true;
+  setRateStatus('Envoi en cours…', 'busy');
+
+  const payload = {
+    username: 'YouTube Ad Tool',
+    avatar_url: RATING_ICON_URL,
+    embeds: [
+      {
+        title: '⭐ Nouvel avis reçu',
+        color: ratingColor(rateValue),
+        description: comment ? comment.slice(0, 500) : '*Aucun commentaire laissé.*',
+        fields: [
+          {
+            name: 'Note',
+            value: rateValue > 0 ? `${starsText(rateValue)}  •  **${rateValue} / 5**` : 'Aucune note',
+            inline: true,
+          },
+          { name: 'Version', value: installedVersion(), inline: true },
+          { name: 'Contexte', value: rateContext, inline: true },
+          {
+            name: 'Profil du votant',
+            value: `Niveau ${levelOf(settings.stats.xp)} · ${settings.stats.xp} XP · ${formatInterval(Math.round(settings.stats.savedSeconds))} gagnées`,
+            inline: false,
+          },
+        ],
+        footer: { text: 'YouTube Ad Tool', icon_url: RATING_ICON_URL },
+        timestamp: new Date().toISOString(),
+      },
+    ],
+  };
+
+  try {
+    const response = await fetch(RATING_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok && response.status !== 204) {
+      throw new Error(`Discord a répondu ${response.status}`);
+    }
+
+    setRateStatus('Merci, ton avis a bien été envoyé !', 'ok');
+    setTimeout(() => closeSheet(sheets.rate), 1300);
+  } catch (err) {
+    setRateStatus("Échec de l'envoi : " + err.message, 'err');
+  } finally {
+    rateSubmitBtn.disabled = false;
+  }
+}
+
+rateSubmitBtn.addEventListener('click', submitRating);
+
+function openRateSheet(context) {
+  rateContext = context;
+  rateValue = 0;
+  paintStars(0);
+  rateComment.value = '';
+  rateCount.textContent = '0';
+  rateStatusBox.hidden = true;
+  openSheet(sheets.rate);
+}
+
+document.getElementById('dev-rate-btn').addEventListener('click', () => {
+  closeSheet(sheets.dev);
+  openRateSheet('Menu développeur');
+});
+document.getElementById('rate-close').addEventListener('click', () => closeSheet(sheets.rate));
+
+document.getElementById('done-rate').addEventListener('click', () => {
+  closeDoneModal();
+  openRateSheet('Fin de placement de pubs');
+});
+
+/* Annonce jouée à chaque version différente de la dernière ouverte — jamais
+ * au tout premier lancement (rien à « mettre à jour » la première fois).
+ * settings.lastSeenVersion est la même valeur qui pilote le point rouge du
+ * bouton changelog : voir le journal des changements marque aussi la
+ * célébration comme vue, et inversement. */
+function announceUpdate() {
   launchConfetti(Math.max(6, settings.dev.confetti));
 
-  doneTitle.textContent = `La version ${installedVersion()} est là !`;
+  const entry = CHANGELOG.find((e) => e.version === APP_VERSION);
+  const highlights = entry ? entry.items.slice(0, 3).join(' · ') : '';
+
+  document.getElementById('done-rate').hidden = true;
+  doneTitle.textContent = `Bienvenue dans la version ${installedVersion()} !`;
   doneDetail.textContent =
-    "L'extension est sortie de bêta. Les mises à jour s'installent désormais depuis l'extension " +
-    'elle-même, et le mode auto sait placer une pub en pré-roll et en end-roll.';
+    highlights || 'Découvre les nouveautés de cette mise à jour dans le journal des changements.';
   doneModal.classList.add('open');
 
-  settings.stableWelcomeSeen = true;
+  settings.lastSeenVersion = APP_VERSION;
+  changelogDot.hidden = true;
   saveSettings();
 }
 
@@ -2576,6 +2753,7 @@ async function runAutoPipeline(tab, bySilence, fill) {
       detail: summary,
       ads: filled.inserted + (removed || 0) + (reduced ? reduced.removed : 0),
       startedAt,
+      allowRating: true,
     });
   } catch (err) {
     const code = err instanceof StepError ? err.message : 'unknown';
@@ -2618,9 +2796,10 @@ function renderDev() {
     ? 'État : masqué (tu as coché « Ne plus me le rappeler »)'
     : 'État : actif';
 
-  document.getElementById('dev-release-state').textContent = settings.stableWelcomeSeen
-    ? 'État : déjà vue'
-    : 'État : sera jouée à la prochaine ouverture';
+  document.getElementById('dev-release-state').textContent =
+    settings.lastSeenVersion === APP_VERSION
+      ? `État : déjà vue pour la ${APP_VERSION}`
+      : `État : sera jouée à la prochaine ouverture (${APP_VERSION})`;
 
   document.getElementById('dev-profile-state').textContent =
     `Niveau ${levelOf(settings.stats.xp)} — ${settings.stats.xp} XP, ` +
@@ -2663,11 +2842,8 @@ document.getElementById('dev-reset-warning').addEventListener('click', () => {
 });
 
 document.getElementById('dev-reset-release').addEventListener('click', () => {
-  settings.stableWelcomeSeen = false;
-  saveSettings();
-  renderDev();
   closeSheet(sheets.dev);
-  announceRelease();
+  announceUpdate();
 });
 
 document.getElementById('dev-fab').addEventListener('click', () => {
@@ -3393,10 +3569,12 @@ chrome.storage?.local.get(['settings'], (stored) => {
   changelogDot.hidden = settings.lastSeenVersion === APP_VERSION;
   renderPin();
 
-  // Première ouverture d'une version stable, une seule fois dans la vie de
-  // l'installation : ne se redéclenche pas aux mises à jour suivantes.
-  if (!settings.stableWelcomeSeen && !APP_VERSION.startsWith('0.')) {
-    announceRelease();
+  if (!settings.lastSeenVersion) {
+    // Tout premier lancement : rien à « mettre à jour », on mémorise sans fêter.
+    settings.lastSeenVersion = APP_VERSION;
+    saveSettings();
+  } else if (settings.lastSeenVersion !== APP_VERSION) {
+    announceUpdate();
   }
 });
 
