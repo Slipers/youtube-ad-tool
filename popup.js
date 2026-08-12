@@ -706,7 +706,7 @@ function formatInterval(totalSeconds) {
   return `${m} min ${s}s`;
 }
 
-const APP_VERSION = '1.5';
+const APP_VERSION = '1.6';
 
 // Dépôt public : sert au contrôle de version et au téléchargement.
 const REPO_OWNER = 'Slipers';
@@ -717,6 +717,14 @@ const RELEASES_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/lat
 
 // Le libellé « Nouveau » n'est rendu que sur l'entrée la plus récente.
 const CHANGELOG = [
+  {
+    version: '1.6',
+    date: '12 août 2026',
+    tag: 'Nouveau',
+    items: [
+      "Nouvelle icône : l'hexagone intérieur devient un heptagone, aligné sur la forme extérieure",
+    ],
+  },
   {
     version: '1.5',
     date: '12 août 2026',
