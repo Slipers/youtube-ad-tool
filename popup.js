@@ -524,6 +524,13 @@ function reduceAdBreaks(params) {
           keepValues.add(validRows[bestIdx].value);
         }
       }
+
+      // Pré-roll (0:00) et end-roll (fin de vidéo) sont des emplacements
+      // volontaires aux extrémités : aucun créneau calculé par espacement ne
+      // tombe forcément assez près d'eux, donc on les garde toujours.
+      validRows.forEach((r) => {
+        if (r.seconds <= 1 || r.seconds >= duration - 2) keepValues.add(r.value);
+      });
     }
 
     let removed = 0;
@@ -706,7 +713,7 @@ function formatInterval(totalSeconds) {
   return `${m} min ${s}s`;
 }
 
-const APP_VERSION = '1.6';
+const APP_VERSION = '2.0';
 
 // Dépôt public : sert au contrôle de version et au téléchargement.
 const REPO_OWNER = 'Slipers';
@@ -716,7 +723,18 @@ const UPDATE_MANIFEST_URL =
 const RELEASES_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/latest`;
 
 // Le libellé « Nouveau » n'est rendu que sur l'entrée la plus récente.
+// « title » remplace le titre générique de la fête de bienvenue quand présent.
 const CHANGELOG = [
+  {
+    version: '2.0',
+    date: '13 août 2026',
+    tag: 'Nouveau',
+    title: 'La v2 est enfin là !',
+    items: [
+      'Le pré-roll (0:00) est désormais toujours conservé lors de la réduction, comme le end-roll',
+      "Pause avant enregistrement fixée à 3 secondes pour tout le monde, plus réglable",
+    ],
+  },
   {
     version: '1.6',
     date: '12 août 2026',
@@ -1276,7 +1294,7 @@ const DEFAULTS = {
   },
   silenceMinMs: 500,
   silenceBetaAck: false,
-  dev: { cooldown: 3, confetti: 10 },
+  dev: { confetti: 10 },
   stats: { xp: 0, savedSeconds: 0 },
   silenceLevel: 30,
   sub: { mode: 'interval', count: 8 },
@@ -2516,7 +2534,7 @@ function announceUpdate() {
   const highlights = entry ? entry.items.slice(0, 3).join(' · ') : '';
 
   document.getElementById('done-rate').hidden = true;
-  doneTitle.textContent = `Bienvenue dans la version ${installedVersion()} !`;
+  doneTitle.textContent = (entry && entry.title) || `Bienvenue dans la version ${installedVersion()} !`;
   doneDetail.textContent =
     highlights || 'Découvre les nouveautés de cette mise à jour dans le journal des changements.';
   doneModal.classList.add('open');
@@ -2652,7 +2670,8 @@ async function runAutoPipeline(tab, bySilence, fill) {
       ? { mode: 'count', count: settings.auto.count }
       : { mode: 'interval', interval: controls.autoInterval.value };
 
-  const cooldown = settings.dev.cooldown;
+  // Fixe : trop court, YouTube peut ne pas avoir fini d'enregistrer les emplacements.
+  const cooldown = 3;
   const startedAt = Date.now();
 
   try {
@@ -2791,17 +2810,13 @@ async function runAutoPipeline(tab, bySilence, fill) {
 
 /* ------------------------------------------------- Outils développeur */
 
-const devCooldown = document.getElementById('dev-cooldown');
 const devCooldownBadge = document.getElementById('dev-cooldown-badge');
 const devConfetti = document.getElementById('dev-confetti');
 const devConfettiBadge = document.getElementById('dev-confetti-badge');
 const devWarningState = document.getElementById('dev-warning-state');
 
 function renderDev() {
-  const cooldown = settings.dev.cooldown;
-  devCooldown.value = String(cooldown);
-  devCooldown.style.setProperty('--fill', `${(cooldown / 60) * 100}%`);
-  devCooldownBadge.textContent = `${cooldown} s`;
+  devCooldownBadge.textContent = '3 s (fixe)';
 
   const confetti = settings.dev.confetti;
   devConfetti.value = String(confetti);
@@ -2836,12 +2851,6 @@ document.getElementById('dev-reset-profile').addEventListener('click', async () 
   renderProfile();
   renderDev();
   setStatus('Profil réinitialisé.', 'ok');
-});
-
-devCooldown.addEventListener('input', () => {
-  settings.dev.cooldown = Math.min(60, Math.max(0, Number(devCooldown.value) || 0));
-  renderDev();
-  saveSettings();
 });
 
 devConfetti.addEventListener('input', () => {
