@@ -388,8 +388,15 @@ function insertAdBreaks(mode, params) {
       targets = [...new Set([...extraEdges, ...targets])].sort((a, b) => a - b);
     }
 
+    // Au-delà du plafond on coupe la fin de la liste : sans précaution, c'est
+    // le end-roll (le dernier de la liste) qui sauterait. Les extrémités
+    // demandées sont donc réservées avant de tronquer le reste.
     const truncated = targets.length > MAX_INSERTS;
-    targets = targets.slice(0, MAX_INSERTS);
+    if (truncated) {
+      const reserved = new Set(extraEdges);
+      const rest = targets.filter((t) => !reserved.has(t));
+      targets = [...reserved, ...rest.slice(0, MAX_INSERTS - reserved.size)].sort((a, b) => a - b);
+    }
 
     if (targets.length === 0) {
       resolve({ inserted: 0, targets: 0, duration, error: 'no-target', ...extra });
@@ -713,7 +720,7 @@ function formatInterval(totalSeconds) {
   return `${m} min ${s}s`;
 }
 
-const APP_VERSION = '2.0';
+const APP_VERSION = '2.2';
 
 // Dépôt public : sert au contrôle de version et au téléchargement.
 const REPO_OWNER = 'Slipers';
@@ -725,6 +732,15 @@ const RELEASES_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/lat
 // Le libellé « Nouveau » n'est rendu que sur l'entrée la plus récente.
 // « title » remplace le titre générique de la fête de bienvenue quand présent.
 const CHANGELOG = [
+  {
+    version: '2.2',
+    date: '20 novembre 2026',
+    tag: 'Nouveau',
+    items: [
+      "L'écart minimum entre deux pubs devient une option : il quitte l'onglet Silence et se règle dans Outils, rubrique Options",
+      'Correctif : avec plus de 500 emplacements à placer, le end-roll demandé n\'était plus posé',
+    ],
+  },
   {
     version: '2.0',
     date: '13 août 2026',
@@ -1514,9 +1530,9 @@ function setupIntervalControl(root) {
   };
 }
 
-/* Un même réglage peut être affiché à deux endroits (l'écart minimum existe
- * dans l'onglet Silence et dans le mode Auto) : on tient donc une liste
- * d'instances par clé, et toute modification est répercutée sur les autres. */
+/* Un même réglage peut être affiché à plusieurs endroits : on tient donc une
+ * liste d'instances par clé, et toute modification est répercutée sur les
+ * autres. (L'écart minimum, lui, n'existe plus que dans Outils › Options.) */
 const controlGroups = {};
 
 document.querySelectorAll('.interval-control').forEach((root) => {

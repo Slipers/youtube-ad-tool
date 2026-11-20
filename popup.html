@@ -1878,25 +1878,9 @@
             </div>
           </div>
 
-          <div class="interval-control compact" data-key="silenceGap" style="margin-top:10px">
-            <div class="card-head">
-              <h2>Écart minimum</h2>
-              <span class="value-badge">2 min</span>
-            </div>
-            <input type="range" class="interval-slider" min="15" max="900" step="5" value="120"
-                   data-hint="Deux pubs ne seront jamais placées plus près que cet écart.">
-            <div class="manual-row">
-              <span class="label">Saisie manuelle</span>
-              <div class="time-field"><input type="number" class="min-input" min="0" max="15" step="1" value="2"><span>min</span></div>
-              <div class="time-field"><input type="number" class="sec-input" min="0" max="59" step="1" value="0"><span>sec</span></div>
-            </div>
-            <div class="preset-row">
-              <button class="preset-btn" data-seconds="30">30 s</button>
-              <button class="preset-btn" data-seconds="60">1 min</button>
-              <button class="preset-btn" data-seconds="120">2 min</button>
-              <button class="preset-btn" data-seconds="180">3 min</button>
-            </div>
-          </div>
+          <p class="dev-note">
+            L'écart minimum entre deux pubs se règle dans l'onglet Outils, rubrique Options.
+          </p>
         </div>
 
         <hr style="border:none;border-top:1px solid var(--border-soft);margin:10px 0">
@@ -1995,26 +1979,9 @@
         </div>
       </div>
 
-      <div class="card interval-control" data-key="silenceGap">
-        <div class="card-head">
-          <h2>Écart minimum</h2>
-          <span class="value-badge">2 min</span>
-        </div>
-        <input type="range" class="interval-slider" min="15" max="900" step="5" value="120"
-               data-hint="Deux pubs ne seront jamais placées plus près que cet écart.">
-        <div class="manual-row">
-          <span class="label">Saisie manuelle</span>
-          <div class="time-field"><input type="number" class="min-input" min="0" max="15" step="1" value="2"><span>min</span></div>
-          <div class="time-field"><input type="number" class="sec-input" min="0" max="59" step="1" value="0"><span>sec</span></div>
-        </div>
-        <div class="preset-row">
-          <button class="preset-btn" data-seconds="30">30 s</button>
-          <button class="preset-btn" data-seconds="60">1 min</button>
-          <button class="preset-btn" data-seconds="90">1 m 30</button>
-          <button class="preset-btn" data-seconds="120">2 min</button>
-          <button class="preset-btn" data-seconds="180">3 min</button>
-        </div>
-      </div>
+      <p class="dev-note" style="margin-top:9px">
+        L'écart minimum entre deux pubs se règle dans l'onglet Outils, rubrique Options.
+      </p>
     </section>
 
     <!-- ================= RÉGULIER ================= -->
@@ -2146,6 +2113,31 @@
           <span class="action-label">Tout supprimer (reset)</span>
           <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
         </button>
+      </div>
+
+      <p class="section-label" style="margin-top:12px">Options</p>
+      <div class="card">
+        <div class="interval-control compact" data-key="silenceGap">
+          <div class="card-head">
+            <h2>Écart minimum entre deux pubs</h2>
+            <span class="value-badge">2 min</span>
+          </div>
+          <input type="range" class="interval-slider" min="15" max="900" step="5" value="120"
+                 data-hint="Deux pubs ne seront jamais placées plus près que cet écart.">
+          <div class="manual-row">
+            <span class="label">Saisie manuelle</span>
+            <div class="time-field"><input type="number" class="min-input" min="0" max="15" step="1" value="2"><span>min</span></div>
+            <div class="time-field"><input type="number" class="sec-input" min="0" max="59" step="1" value="0"><span>sec</span></div>
+          </div>
+          <div class="preset-row">
+            <button class="preset-btn" data-seconds="30">30 s</button>
+            <button class="preset-btn" data-seconds="60">1 min</button>
+            <button class="preset-btn" data-seconds="90">1 m 30</button>
+            <button class="preset-btn" data-seconds="120">2 min</button>
+            <button class="preset-btn" data-seconds="180">3 min</button>
+          </div>
+        </div>
+        <p class="dev-note">Utilisé par le mode Silence et par le mode Auto en silence.</p>
       </div>
 
       <p class="section-label" style="margin-top:12px">Ton profil</p>
